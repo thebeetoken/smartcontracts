@@ -38,7 +38,7 @@ contract ERC20 {
     // Checks balance of address
     function balanceOf(address who) constant returns (uint256);
     // Allows for trasfer of token
-    function transfer(address indexed from, address indexed to, uint256 value);
+    function transfer(address from, address to, uint256 value);
     // Amount limiter
     function allowance(address owner, address spender) constant returns (uint256);
     // Check if transferrable
@@ -46,7 +46,7 @@ contract ERC20 {
     // Confirmation
     function approve(address spender, uint256 value) returns (bool);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Transfer(address indexed from, address indexed to, uint256 value;)
+    event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
 contract BasicToken is ERC20 {
@@ -179,7 +179,7 @@ contract buzzSale is StandardToken, Ownable {
     using SafeMath for uint256;
 
     // The token being sold
-    //MintableToken public token;
+    StandardToken public token;
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;

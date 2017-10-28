@@ -1,6 +1,6 @@
-pragma solidity ^0.4.17;
+pagma solidity ^0.4.17;
 
-        contract transaction {
+        contract RentalAgreement {
             bool complete; //replace with state transitions
             address guest;
             address host;
@@ -33,7 +33,7 @@ pragma solidity ^0.4.17;
 
             function() { revert(); }//return funds minus gased used if wrongly sent
 
-            function transaction(address specifiedHost, address specifiedGuest, bytes32 rentTitle, uint expiry) {
+            function rentalAgreement (address specifiedHost, address specifiedGuest, bytes32 rentTitle, uint expiry) {
                 host = specifiedHost;
                 guest = specifiedGuest;
                 arbiter = msg.sender;
