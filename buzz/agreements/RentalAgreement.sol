@@ -1,4 +1,4 @@
-pagma solidity ^0.4.17;
+pragma solidity ^0.4.17;
 
         contract RentalAgreement {
             bool complete; //replace with state transitions
@@ -37,7 +37,7 @@ pagma solidity ^0.4.17;
                 host = specifiedHost;
                 guest = specifiedGuest;
                 arbiter = msg.sender;
-                contractStart(block.timetamp, rentTitle);
+                contractStart(block.timestamp, rentTitle);
                 expTime = block.timestamp + expiry;
                 rentId = rentTitle;
             }
