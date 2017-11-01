@@ -11,30 +11,38 @@ contract RentalAgreement {
     bool hostSatisfied = false;
     bool guestSatisfied = false;
     uint expirationTimestamp;
-    bytes32 bookingUUID;
+    string bookingUUID;
 
     event ContractIsComplete(uint timestamp);
-    event ContractStart(uint timestamp, bytes32 bookingUUID);
-    event ContractEnded(uint timestamp, bytes32 bookingUUID);
+    event ContractStart(uint timestamp, string bookingUUID);
+    event ContractEnded(uint timestamp, string bookingUUID);
 
     modifier guestHostOnly() {
-        if (msg.sender != guestAddress || msg.sender != hostAddress)
+        if (msg.sender != guestAddress || msg.sender != hostAddress) {
             revert();
-        else _;
+        } else {
+            _;
+        }
     }
 
     modifier notExpired() {
         if (block.timestamp >= expirationTimestamp) {
             fallback(); //send funds to arbiter
             revert();
+        } else {
+            _;
         }
-        else _;
-
     }
 
     function()  public { revert(); }//return funds minus gased used if wrongly sent
 
-    function rentalAgreement (address specifiedHost, address specifiedGuest, bytes32 rentTitle, uint expiry)  public {
+    function rentalAgreement (
+        address specifiedHost, 
+        address specifiedGuest, 
+        string rentTitle, 
+        uint expiry)  
+        public 
+        {
         hostAddress = specifiedHost;
         guestAddress = specifiedGuest;
         arbiter = msg.sender;
@@ -43,19 +51,20 @@ contract RentalAgreement {
         bookingUUID = rentTitle;
     }
 
-    function payContract() payable  public {
-        if (msg.sender != guestAddress || complete) revert();
+    function payContract() public payable {
+        if (msg.sender != guestAddress || complete) { 
+            revert();
+        }
         rentValue = msg.value;
         complete = true;
         completeTime = block.timestamp;
         contractIsComplete(completeTime);
     }
 
-    function satisfied() guestHostOnly notExpired  public {
+    function satisfied() public guestHostOnly notExpired {
         if (msg.sender == hostAddress) {
             hostSatisfied = true;
-        }
-        else {
+        }else {
             guestSatisfied = true;
         }
         if (guestSatisfied && hostSatisfied) {
