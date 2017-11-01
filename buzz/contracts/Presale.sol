@@ -12,7 +12,7 @@ pragma solidity ^0.4.16;
 contract Ownable {
     address public owner;
 
-    function Ownable() {
+    function Ownable()  public {
         owner = msg.sender;
     }
 
@@ -21,7 +21,7 @@ contract Ownable {
         _;
     }
 
-    function transferOwnership(address newOwner) onlyOwner {
+    function transferOwnership(address newOwner) onlyOwner  public {
         require(newOwner != address(0));
         owner = newOwner;
     }
@@ -54,7 +54,7 @@ contract Presale is Ownable {
     }
 
     
-    function Presale() payable {
+    function Presale() payable  public {
          //log private presale amounts, add to public
     }
     
@@ -66,12 +66,12 @@ contract Presale is Ownable {
     
     mapping(address => bool) whiteList;
     
-    function whiteListAddress (address user) onlyOwner {
+    function whiteListAddress (address user) onlyOwner  public {
         whiteList[user] = true;
         
     }
     
-    function () payable {
+    function () payable  public {
         require(whiteList[msg.sender] == true);
         require(now > presaleStartTime);
         require(now < presaleEndTime);

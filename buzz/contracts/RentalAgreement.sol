@@ -31,9 +31,9 @@ pragma solidity ^0.4.17;
 
             }
 
-            function() { revert(); }//return funds minus gased used if wrongly sent
+            function()  public { revert(); }//return funds minus gased used if wrongly sent
 
-            function rentalAgreement (address specifiedHost, address specifiedGuest, bytes32 rentTitle, uint expiry) {
+            function rentalAgreement (address specifiedHost, address specifiedGuest, bytes32 rentTitle, uint expiry)  public {
                 host = specifiedHost;
                 guest = specifiedGuest;
                 arbiter = msg.sender;
@@ -42,7 +42,7 @@ pragma solidity ^0.4.17;
                 rentId = rentTitle;
             }
 
-            function payContract() payable {
+            function payContract() payable  public {
                 if(msg.sender != guest || complete) revert();
                 rentValue = msg.value;
                 complete = true;
@@ -50,7 +50,7 @@ pragma solidity ^0.4.17;
                 contractIsComplete(completeTime);
             }
 
-            function satisfied() guestHostOnly notExpired {
+            function satisfied() guestHostOnly notExpired  public {
                 if(msg.sender == host) {
                     hostSatisfied = true;
                 }

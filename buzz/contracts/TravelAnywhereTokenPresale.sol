@@ -17,7 +17,7 @@ contract TravelAnywhereTokenPreSale is PreSaleToken {
     
     event CreatePreSale(address indexed _to, uint256 _amount);
     
-    function TravelAnywhereTokenPreSale(address _travelAnywhereEthFund, uint256 _presaleStartBlock, uint256 _presaleEndBlock) {
+    function TravelAnywhereTokenPreSale(address _travelAnywhereEthFund, uint256 _presaleStartBlock, uint256 _presaleEndBlock)  public {
         travelAnywhereEthFund = _travelAnywhereEthFund;
         presaleStartBlock = _presaleStartBlock;
         presaleEndBlock = _presaleEndBlock;

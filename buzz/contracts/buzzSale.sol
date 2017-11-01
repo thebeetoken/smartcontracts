@@ -10,7 +10,7 @@ contract Ownable {
 
 
     // Ownable constructor sets the original `owner` of the contract to the sender
-    function Ownable() {
+    function Ownable()  public {
         owner = msg.sender;
     }
 
@@ -24,7 +24,7 @@ contract Ownable {
 
     // Allows the current owner to transfer control of the contract to a newOwner.
     // NewOwner is the address to transfer ownership.
-    function transferOwnership(address newOwner) onlyOwner {
+    function transferOwnership(address newOwner) onlyOwner  public {
         require(newOwner != address(0));      
         owner = newOwner;
     }
@@ -38,7 +38,7 @@ contract ERC20 {
     // Checks balance of address
     function balanceOf(address who) constant returns (uint256);
     // Allows for trasfer of token
-    function transfer(address from, address to, uint256 value);
+    function transfer(address from, address to, uint256 value) public;
     // Amount limiter
     function allowance(address owner, address spender) constant returns (uint256);
     // Check if transferrable
@@ -203,7 +203,7 @@ contract buzzSale is StandardToken, Ownable {
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function buzzSale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) {
+    function buzzSale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet)  public {
         require(_startTime >= now);
         require(_endTime >= _startTime);
         require(_rate > 0);
@@ -224,12 +224,12 @@ contract buzzSale is StandardToken, Ownable {
 
 
     // Fallback function can be used to buy tokens
-    function () payable {
+    function () payable  public {
         buyTokens(msg.sender);
     }
 
     // Low level token purchase function
-    function buyTokens(address beneficiary) payable {
+    function buyTokens(address beneficiary) payable  public {
         require(beneficiary != 0x0);
         require(validPurchase());
 
