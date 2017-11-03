@@ -21,7 +21,7 @@ contract Ownable {
         _;
     }
 
-    function transferOwnership(address newOwner) onlyOwner  public {
+    function transferOwnership(address newOwner) public onlyOwner {
         require(newOwner != address(0));
         owner = newOwner;
     }
@@ -30,7 +30,7 @@ contract Ownable {
 
 contract Presale is Ownable {
 
-    uint256 public constant minAmount = 1 ether;
+    uint256 public constant MIN_AMOUNT = 1 ether;
     uint256 public minAccept = 1 wei;
     uint256 public totalFunds;
     uint256 public presaleStartTime = now;
@@ -39,14 +39,13 @@ contract Presale is Ownable {
 
     mapping (address => uint256 ) balanceOf;
     event LogParticipation(address indexed sender, uint256 value, uint256 timestamp);
-
-
     event UserList(address indexed sender, uint256 value, uint timestamp);
     
     function sub(uint256 a, uint256 b) internal returns (uint256) {
         require(b <= a);
         return a - b;
     }
+
     function add(uint256 a, uint256 b) internal returns (uint256) {
         uint256 c = a + b;
         require(c >= a);
@@ -54,10 +53,9 @@ contract Presale is Ownable {
     }
 
     
-    function Presale() payable  public {
+    function Presale() public payable {
          //log private presale amounts, add to public
     }
-    
     
     function ownerWithdraw(uint256 value) external onlyOwner {
         require(totalFunds > minAmount);
@@ -66,12 +64,11 @@ contract Presale is Ownable {
     
     mapping(address => bool) whiteList;
     
-    function whiteListAddress (address user) onlyOwner  public {
-        whiteList[user] = true;
-        
+    function whiteListAddress (address user) public onlyOwner {
+        whiteList[user] = true;    
     }
     
-    function () payable  public {
+    function () public payable {
         require(whiteList[msg.sender] == true);
         require(now > presaleStartTime);
         require(now < presaleEndTime);
@@ -113,8 +110,6 @@ contract Presale is Ownable {
         // Log an event of the participant's contribution
         LogParticipation(participant, value, now);
     }
-    
-
 }
 
 

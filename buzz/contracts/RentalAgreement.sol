@@ -1,87 +1,101 @@
 pragma solidity ^0.4.16;
+// Current iteration accepts Ether as payment using msg.value
+// Need to restrict contract to accept specific token contract
+// and keep track of price in tokens. Transfer tokens using 
+// token contract's transfer function.
 
 
 contract RentalAgreement {
-    bool complete; //replace with state transitions
-    address guestAddress;
-    address hostAddress;
-    address arbiter; //sent to this address if bad transaction
-    uint rentValue;
-    uint completeTime;
-    bool hostSatisfied = false;
-    bool guestSatisfied = false;
-    uint expirationTimestamp;
-    string bookingUUID;
 
-    event ContractIsComplete(uint timestamp);
-    event ContractStart(uint timestamp, string bookingUUID);
-    event ContractEnded(uint timestamp, string bookingUUID);
 
-    modifier guestHostOnly() {
-        if (msg.sender != guestAddress || msg.sender != hostAddress) {
-            revert();
-        } else {
-            _;
-        }
+    bool internal contractPaid; //replace with state transitions
+    address public guestAddress;
+    address public hostAddress;
+    address public arbiter; //sent to this address if bad transaction
+    uint public tokensPerNight; //currently in ETH. Change to test token
+    uint public  paidTime;
+    bool internal hostSatisfied = false;
+    bool internal guestSatisfied = false;
+    uint public expirationTimestamp;
+    string public bookingUUID;
+
+    event ContractIsPaid(uint timestamp);
+    event BothSatisfied(bool satisfied);
+    event ContractStart(uint timestamp, string bookingID);
+    event ContractEnded(uint timestamp, string bookingID);
+
+    modifier onlyHost() {
+        require(msg.sender == hostAddress);
+        _;
     }
 
-    modifier notExpired() {
-        if (block.timestamp >= expirationTimestamp) {
-            fallback(); //send funds to arbiter
-            revert();
-        } else {
-            _;
-        }
+    modifier onlyGuest() {
+        require(msg.sender == guestAddress);
+        _;
     }
 
-    function()  public { revert(); }//return funds minus gased used if wrongly sent
+    //not working as expected. Please change
+    //modifier notExpired() {
+    //    require(now < expirationTimestamp);
+    //    _;
+    //}
+    function () public payable { 
+        revert(); 
+    }//return funds minus gased used if wrongly sent
 
     function rentalAgreement (
         address specifiedHost, 
-        address specifiedGuest, 
-        string rentTitle, 
-        uint expiry)  
-        public 
+        address specifiedGuest,
+        string bookingID, 
+        uint rent,
+        uint expTime) public 
         {
-        hostAddress = specifiedHost;
-        guestAddress = specifiedGuest;
-        arbiter = msg.sender;
-        contractStart(block.timestamp, rentTitle);
-        expirationTimestamp = block.timestamp + expiry;
-        bookingUUID = rentTitle;
-    }
+            tokensPerNight = rent;
+            hostAddress = specifiedHost;
+            guestAddress = specifiedGuest;
+            arbiter = msg.sender;
+            ContractStart(now, bookingID);
+            // Convert date time into unix timestamp
+            expirationTimestamp = expTime;
+            bookingUUID = bookingID;
+        }
 
     function payContract() public payable {
-        if (msg.sender != guestAddress || complete) { 
+        if (msg.sender != guestAddress || contractPaid) { 
             revert();
         }
-        rentValue = msg.value;
-        complete = true;
-        completeTime = block.timestamp;
-        contractIsComplete(completeTime);
+        tokensPerNight = msg.value;
+        contractPaid = true;
+        paidTime = now;
+        ContractIsPaid(paidTime);
     }
 
-    function satisfied() public guestHostOnly notExpired {
+    function satisfied() public onlyHost onlyGuest {
         if (msg.sender == hostAddress) {
             hostSatisfied = true;
         }else {
             guestSatisfied = true;
         }
+    }
+
+    function payout() public {
         if (guestSatisfied && hostSatisfied) {
-            payout();
+            BothSatisfied(true);
+            ContractEnded(now, bookingUUID);
+            selfdestruct(hostAddress);
+        }else {
+            BothSatisfied(false);
+            ContractEnded(now, bookingUUID);
+            selfdestruct(arbiter);
         }
     }
 
-    function payout() internal {
-        contractEnded(block.timestamp, bookingUUID);
-        selfdestruct(hostAddress); //sends money to host
-    }
+    //function fallback() internal {
+    //    ContractEnded(now, bookingUUID);
+    //    selfdestruct(arbiter);
+    //}
 
-    function fallback() internal {
-        contractEnded(block.timestamp, bookingUUID);
-        selfdestruct(arbiter);
-    }
+    //function tokenTransfer(uint tokenPrice, address tokenAddress) {
+    //}
 
 }
-
-
