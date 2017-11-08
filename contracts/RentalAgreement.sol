@@ -23,6 +23,14 @@ contract RentalAgreement {
     event BothSatisfied(bool satisfied);
     event ContractStart(uint timestamp, string bookingID);
     event ContractEnded(uint timestamp, string bookingID);
+    //event TokenTranferred(
+        //address msgSender, // Address of the sender of the message initiating the transaction
+        //address otherSigner, // Address of the signer (second signature) used to initiate the transaction
+        //bytes32 operation, // Operation hash (sha3 of toAddress, value, tokenContractAddress, expireTime, sequenceId)
+        //address toAddress, // The address the transaction was sent to
+        //uint value, // Amount of Wei sent to the address
+        //address tokenContractAddress // Data sent when invoking the transaction
+        //);
 
     modifier onlyHost() {
         require(msg.sender == hostAddress);

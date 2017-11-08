@@ -6,21 +6,20 @@ import "./SafeMath.sol";
 // 
 // Ownable contract has an owner address, and provides basic authorization control functions.
 contract Ownable {
+    
+    
     address public owner;
-
 
     // Ownable constructor sets the original `owner` of the contract to the sender
     function Ownable()  public {
         owner = msg.sender;
     }
 
-
     // Throws if called by any account other than the owner.
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
     }
-
 
     // Allows the current owner to transfer control of the contract to a newOwner.
     // NewOwner is the address to transfer ownership.
@@ -33,6 +32,8 @@ contract Ownable {
 
 
 contract ERC20 {
+   
+    
     // Create supply of ERC20
     uint256 public totalSupply;
     // Checks balance of address
@@ -47,9 +48,12 @@ contract ERC20 {
     function approve(address spender, uint256 value) returns (bool);
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
+
 }
 
 contract BasicToken is ERC20 {
+    
+    
     using SafeMath for uint256;
 
     mapping(address => uint) balances;
@@ -73,13 +77,14 @@ contract BasicToken is ERC20 {
     function balanceOf(address _owner) constant returns (uint256 balance) {
         return balances[_owner];
     }
+
 }
 
 
 contract StandardToken is ERC20, BasicToken {
 
+    
     mapping (address => mapping (address => uint256)) allowed;
-
 
     // Transfer tokens from one address to another
     function transferFrom(address _from, address _to, uint256 _value) returns (bool) {
@@ -138,40 +143,6 @@ contract StandardToken is ERC20, BasicToken {
     }
 
 }
-
-// Based on code by TokenMarketNet: https://github.com/TokenMarketNet/ico/blob/master/contracts/MintableToken.sol
-
-/* contract MintableToken is StandardToken, Ownable {
-    event Mint(address indexed to, uint256 amount);
-    event MintFinished();
-
-    bool public mintingFinished = false;
-
-    modifier canMint() {
-        require(!mintingFinished);
-        _;
-    }
-
-    // Function to mint tokens
-    // return A boolean that indicates if the operation was successful.
-    function mint(address _to, uint256 _amount) onlyOwner canMint returns (bool) {
-        totalSupply = totalSupply.add(_amount);
-        balances[_to] = balances[_to].add(_amount);
-        Mint(_to, _amount);
-        Transfer(0x0, _to, _amount);
-        return true;
-    }
-
-    // Function to stop minting new tokens.
-    // return True if the operation was successful.
-    function finishMinting() onlyOwner returns (bool) {
-        mintingFinished = true;
-        MintFinished();
-        return true;
-    }
-}
-*/
-
 
 
 contract buzzSale is StandardToken, Ownable {
