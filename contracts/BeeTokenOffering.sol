@@ -1,5 +1,6 @@
 pragma solidity ^0.4.16;
 
+
 /**
  * Math operations with safety checks
  */
@@ -59,7 +60,7 @@ contract Ownable {
 }
 
 
-interface token {
+interface Token {
     function transfer(address receiver, uint amount) returns (bool success);
     function balanceOf(address _owner) constant returns (uint256 balance);
 }
@@ -81,7 +82,7 @@ contract BeeTokenOffering is Ownable {
 
     // Token to be sold
     //address public constant token = tokenContract();
-    token public tokenContract;
+    Token public tokenContract;
 
     // How many token units a buyer gets per wei
     uint256 public rate;
@@ -94,8 +95,8 @@ contract BeeTokenOffering is Ownable {
 
 
     // Replace with real start and end times based off of strategy document
-    uint256 public doubleTime = startTime + 5 minutes;
-    uint256 public uncappedTime = startTime + 10 minutes;
+    uint256 public doubleTime;
+    uint256 public uncappedTime;
 
     // Input base allowance of tokens 
     uint public aAmount;
@@ -142,11 +143,14 @@ contract BeeTokenOffering is Ownable {
         bAmount = base*20;
         cAmount = base*15;
         dAmount = base*10;
-        tokenContract = token(0xb178A41C3908D01B605e2e7Bf9C55da97FD50e94);
+        tokenContract = Token(0xb178A41C3908D01B605e2e7Bf9C55da97FD50e94);
         startTime = _startTime;
         endTime = _endTime;
+        doubleTime = startTime + 5 minutes;
+        uncappedTime = startTime + 10 minutes;
         rate = _rate; // Wei to Bee
         wallet = _wallet;
+        tokenContract.transfer(wallet,250000000);
     }
 
     // Fallback function can be used to buy tokens
@@ -239,11 +243,8 @@ contract BeeTokenOffering is Ownable {
     function validPurchase() internal constant returns (bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        return withinPeriod && nonZeroPurchase;
+        bool withinFunding = weiRaised <=  FUNDING_ETH_HARD_CAP;  
+        return withinPeriod && nonZeroPurchase && withinFunding;
     }
 
 }
-
-
-
-
