@@ -111,8 +111,10 @@ contract RentalAgreement {
         
         if (msg.sender == hostAddress) {
             hostSatisfied = satisfaction;
+            response[msg.sender] = true;
         }else {
             guestSatisfied = satisfaction;
+            response[msg.sender] = true;
         }
         if (response[guestAddress] && response[hostAddress]) {
             stage = Stages.Satisfied;
