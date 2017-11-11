@@ -6,31 +6,39 @@ pragma solidity ^0.4.16;
 
 
 contract RentalAgreement {
-
-
+    
+    
     bool internal contractPaid; //replace with state transitions
     address public guestAddress;
     address public hostAddress;
     address public arbiter; //sent to this address if bad transaction
     uint public tokensPerNight; //currently in ETH. Change to test token
-    uint public  paidTime;
+    uint public guestDeposit;
+    uint public hostDeposit;
+    uint public paidTime;
     bool internal hostSatisfied = false;
     bool internal guestSatisfied = false;
-    uint public expirationTimestamp;
+    //uint public expirationTimestamp;
     string public bookingUUID;
-
+    
+    
     event ContractIsPaid(uint timestamp);
     event BothSatisfied(bool satisfied);
     event ContractStart(uint timestamp, string bookingID);
     event ContractEnded(uint timestamp, string bookingID);
-    //event TokenTranferred(
-        //address msgSender, // Address of the sender of the message initiating the transaction
-        //address otherSigner, // Address of the signer (second signature) used to initiate the transaction
-        //bytes32 operation, // Operation hash (sha3 of toAddress, value, tokenContractAddress, expireTime, sequenceId)
-        //address toAddress, // The address the transaction was sent to
-        //uint value, // Amount of Wei sent to the address
-        //address tokenContractAddress // Data sent when invoking the transaction
-        //);
+    
+    mapping (address => uint) public rentPaid;
+    mapping (address => uint) public depositPaid;
+    mapping (address => bool) public response;
+    
+    Stages public stage;
+    
+    enum Stages {
+        Start,
+        DepositsPaid,
+        GuestPaid,
+        Satisfied
+    }
 
     modifier onlyHost() {
         require(msg.sender == hostAddress);
@@ -41,69 +49,91 @@ contract RentalAgreement {
         require(msg.sender == guestAddress);
         _;
     }
+    
+    modifier atStage(Stages _stage) {
+        require(stage == _stage);
+        _;
+    }
 
-    //not working as expected. Please change
-    //modifier notExpired() {
-    //    require(now < expirationTimestamp);
-    //    _;
-    //}
-    function () public payable { 
-        revert(); 
-    }//return funds minus gased used if wrongly sent
-
-    function rentalAgreement (
+    function RentalAgreement (
         address specifiedHost, 
         address specifiedGuest,
         string bookingID, 
         uint rent,
-        uint expTime) public 
+        uint _guestDeposit,
+        uint _hostDeposit) public 
         {
             tokensPerNight = rent;
+            guestDeposit = _guestDeposit;
+            hostDeposit = _hostDeposit;
             hostAddress = specifiedHost;
             guestAddress = specifiedGuest;
             arbiter = msg.sender;
-            ContractStart(now, bookingID);
             // Convert date time into unix timestamp
-            expirationTimestamp = expTime;
+            //expirationTimestamp = expTime;
             bookingUUID = bookingID;
+            stage = Stages.Start;
         }
+    
+    function () public payable { 
+        
+        revert(); 
+    }//return funds minus gased used if wrongly sent
+ 
+    function payDeposit() public payable {
+        
+        require(msg.sender == hostAddress || msg.sender == guestAddress);
+        
+        if (msg.sender == guestAddress) {
+            depositPaid[guestAddress] += msg.value;
+        }else {depositPaid[hostAddress] += msg.value;}
+        
+        if (depositPaid[hostAddress] >= hostDeposit && depositPaid[guestAddress] >= guestDeposit) {
+            stage = Stages.DepositsPaid;
+        }
+    }  
 
     function payContract() public payable {
+        
         if (msg.sender != guestAddress || contractPaid) { 
             revert();
         }
-        tokensPerNight = msg.value;
-        contractPaid = true;
-        paidTime = now;
-        ContractIsPaid(paidTime);
+        rentPaid[guestAddress] += msg.value;
+        if (rentPaid[guestAddress] >= tokensPerNight) {
+            contractPaid = true;
+            paidTime = now;
+        }
     }
-
-    function satisfied() public onlyHost onlyGuest {
+    
+    function satisfied(bool satisfaction) public {
+        
+        require(msg.sender == hostAddress || msg.sender == guestAddress);
+        
         if (msg.sender == hostAddress) {
-            hostSatisfied = true;
+            hostSatisfied = satisfaction;
         }else {
-            guestSatisfied = true;
+            guestSatisfied = satisfaction;
+        }
+        if (response[guestAddress] && response[hostAddress]) {
+            stage = Stages.Satisfied;
         }
     }
 
-    function payout() public {
+    function payout() public atStage(Stages.Satisfied) {
+        
         if (guestSatisfied && hostSatisfied) {
-            BothSatisfied(true);
-            ContractEnded(now, bookingUUID);
-            selfdestruct(hostAddress);
+            guestAddress.transfer(depositPaid[guestAddress]);
+            hostAddress.transfer(depositPaid[hostAddress]+rentPaid[guestAddress]);
         }else {
-            BothSatisfied(false);
-            ContractEnded(now, bookingUUID);
             selfdestruct(arbiter);
         }
     }
 
-    //function fallback() internal {
-    //    ContractEnded(now, bookingUUID);
-    //    selfdestruct(arbiter);
-    //}
+    function getHostStatus() public returns (bool ok) {
+        return hostSatisfied;
+    }
 
-    //function tokenTransfer(uint tokenPrice, address tokenAddress) {
-    //}
-
+    function getGuestStatus() public returns (bool ok) {
+        return guestSatisfied;
+    }
 }
