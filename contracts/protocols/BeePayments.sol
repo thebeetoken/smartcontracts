@@ -1,6 +1,9 @@
 pragma solidity ^0.4.16;
 
+
 contract BeePayments {
+    
+    
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
         INITIALIZED,    // awaiting payment from supply & demand entities
@@ -11,6 +14,7 @@ contract BeePayments {
     }
 
     struct PaymentStruct {
+        
         bytes32 paymentId; // keccak256 hash of all fields
         PaymentStatus paymentStatus;
         address supplyEntityAddress;
@@ -31,10 +35,10 @@ contract BeePayments {
     event DisputePayment();
     
     // TODO: define modifiers
-    modifier demandPayed(bytes32 _paymentHash) {
+    modifier demandPaid(bytes32 _paymentHash) {
         _;
     }
-    modifier supplyPayed(bytes32 _paymentHash) {
+    modifier supplyPaid(bytes32 _paymentHash) {
         _;
     }
     
@@ -52,6 +56,10 @@ contract BeePayments {
     mapping (bytes32 => uint) canceledPayments;
     
     function BeePayments() public {}
+
+    function () public payable {
+        _;
+    }
     
     /**
      * Initializes a new payment, and awaits for supply & demand entities to
@@ -69,8 +77,9 @@ contract BeePayments {
      */
     function pay(bytes32 paymentHash) 
         public
-        demandPayed(paymentHash)
-        supplyPayed(paymentHash) {
+        payable
+        demandPaid(paymentHash)
+        supplyPaid(paymentHash) {
             // TODO: once the full amount is reached, move from initialized to 
             // in progress
         }
@@ -110,7 +119,7 @@ contract BeePayments {
         returns(PaymentStruct) {
             // TODO: return NOT_FOUND if payment not present.
             return allPayments[paymentHash];
-    }
+        }
     
     // TODO: createPaymentStruct and createPaymentId
     /*

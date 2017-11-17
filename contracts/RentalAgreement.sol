@@ -22,10 +22,10 @@ contract RentalAgreement {
     string public bookingUUID;
     
     
-    event ContractIsPaid(uint timestamp);
-    event BothSatisfied(bool satisfied);
-    event ContractStart(uint timestamp, string bookingID);
-    event ContractEnded(uint timestamp, string bookingID);
+    //event ContractIsPaid(uint timestamp);
+    //event BothSatisfied(bool satisfied);
+    //event ContractStart(uint timestamp, string bookingID);
+    //event ContractEnded(uint timestamp, string bookingID);
     
     mapping (address => uint) public rentPaid;
     mapping (address => uint) public depositPaid;
