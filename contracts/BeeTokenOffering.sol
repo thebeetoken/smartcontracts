@@ -136,7 +136,6 @@ contract BeeTokenOffering is Ownable {
     mapping(address => uint) public contributions;
     
     function BeeTokenOffering(
-        address tokenAddress,
         uint256 _rate, 
         address _beneficiary, 
         uint256 _base) public {
@@ -150,7 +149,6 @@ contract BeeTokenOffering is Ownable {
         bAmount = base*20;
         cAmount = base*15;
         dAmount = base*10;
-        token = BeeToken(tokenAddress);
         rate = _rate; // BEE to Ether
         beneficiary = _beneficiary;
         stage = Stages.OfferingDeployed;
