@@ -1,120 +1,87 @@
-pragma solidity ^0.4.17;
-import "./SafeMath.sol";
-
-contract Token {
-    uint256 public _totalSupply;
-    bool public releaseFunds = false;
-    address public travelAnywhereFundDeposit; // deposit address for TravelAnywhere Tokens
-    uint256 public totalEthereum = 0; // Hold the total value of Ethereum of the entire pool, used to calculate cashout/burn.
-    function totalSupply() constant returns (uint256 totalSupply);
-    function balanceOf(address _owner) constant returns (uint256 balance);
-    function transfer(address _to, uint256 _value) returns (bool success);
-    function transferFrom(address _from, address _to, uint256 _value) returns (bool success);
-    function approve(address _spender, uint256 _value) returns (bool success);
-    function allowance(address _owner, address _spender) constant returns (uint256 remaining);
-    function stake(uint256 _value) constant returns (bool success);
-    function balanceStaked(address _owner) constant returns (uint256 staked);
-    function unstake(uint256 _value) constant returns (bool success);
-    function burn(uint256 _amount) constant returns (bool success);
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-    event Stake(address indexed _from, uint256 _value);
-    event UnStake(address indexed _from, uint256 _value);
-    event Burn(address indexed _owner, uint256 _value);
-    
-    // extra functionality while live
-    bool public allowTransfers = false; // Stop transfers during ICO.
-    uint256 public saleStart;
-}
+pragma solidity ^0.4.18;
 
 
-/*  ERC 20 token */
-contract StandardToken is Token {
-    using SafeMath for uint256;
-    
-    function totalSupply() constant returns (uint256 totalSupply) {
-      totalSupply = _totalSupply;
-    }
+import './BasicToken.sol';
+import './ERC20.sol';
 
-    function transfer(address _to, uint256 _value) returns (bool success) {
-      if (!allowTransfers) return false;
-      //if Travel Anywhere is trying to trade, check that it's been 1 year.
-      if (msg.sender == travelAnywhereFundDeposit) {
-          if(!releaseFunds) return false;
-      }
-      if (balances[msg.sender] >= _value && _value > 0) {
-        balances[msg.sender] -= _value;
-        balances[_to] += _value;
-        Transfer(msg.sender, _to, _value);
-        return true;
-      } else {
-        return false;
-      }
-    }
 
-    function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
-      if (!allowTransfers) return false;
-      //if TravelAnywhere Inc. is trying to trade, check that it's been 1 year.
-      if (_from == travelAnywhereFundDeposit) {
-          if(!releaseFunds) return false;
-      }
-      if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
-        balances[_to] += _value;
-        balances[_from] -= _value;
-        allowed[_from][msg.sender] -= _value;
-        Transfer(_from, _to, _value);
-        return true;
-      } else {
-        return false;
-      }
-    }
+/**
+ * @title Standard ERC20 token
+ *
+ * @dev Implementation of the basic standard token.
+ * @dev https://github.com/ethereum/EIPs/issues/20
+ * @dev Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
+ */
+contract StandardToken is ERC20, BasicToken {
 
-    function balanceOf(address _owner) constant returns (uint256 balance) {
-        return balances[_owner];
-    }
+  mapping (address => mapping (address => uint256)) internal allowed;
 
-    function approve(address _spender, uint256 _value) returns (bool success) {
-        allowed[msg.sender][_spender] = _value;
-        Approval(msg.sender, _spender, _value);
-        return true;
-    }
 
-    function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
-      return allowed[_owner][_spender];
-    }
-    
-    function stake(uint256 _value) constant returns (bool success) {
-        if (!allowTransfers) return false; // Don't allow staking during the ICO.
-        if (balances[msg.sender] < _value) return false; // Check to make sure they are not staking more than they have.
-        balances[msg.sender] -= _value;
-        staking[msg.sender] += _value;
-        Stake(msg.sender, _value);
-    }
-    
-    function balanceStaked(address _owner) constant returns (uint256 staked) {
-        return staking[_owner];
-    }
+  /**
+   * @dev Transfer tokens from one address to another
+   * @param _from address The address which you want to send tokens from
+   * @param _to address The address which you want to transfer to
+   * @param _value uint256 the amount of tokens to be transferred
+   */
+  function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+    require(_to != address(0));
+    require(_value <= balances[_from]);
+    require(_value <= allowed[_from][msg.sender]);
 
-    function unstake(uint256 _value) constant returns (bool success) {
-        if (!allowTransfers) return false; // Don't allow staking during the ICO.
-        if (staking[msg.sender] < _value) return false; // Make sure they can't unstake more than they have staked.
-        balances[msg.sender] += _value;
-        staking[msg.sender] -= _value;
-        UnStake(msg.sender, _value);
+    balances[_from] = balances[_from].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+    Transfer(_from, _to, _value);
+    return true;
+  }
+
+  /**
+   * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
+   *
+   * Beware that changing an allowance with this method brings the risk that someone may use both the old
+   * and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
+   * race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
+   * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+   * @param _spender The address which will spend the funds.
+   * @param _value The amount of tokens to be spent.
+   */
+  function approve(address _spender, uint256 _value) public returns (bool) {
+    allowed[msg.sender][_spender] = _value;
+    Approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  /**
+   * @dev Function to check the amount of tokens that an owner allowed to a spender.
+   * @param _owner address The address which owns the funds.
+   * @param _spender address The address which will spend the funds.
+   * @return A uint256 specifying the amount of tokens still available for the spender.
+   */
+  function allowance(address _owner, address _spender) public view returns (uint256) {
+    return allowed[_owner][_spender];
+  }
+
+  /**
+   * approve should be called when allowed[_spender] == 0. To increment
+   * allowed value is better to use this function to avoid 2 calls (and wait until
+   * the first transaction is mined)
+   * From MonolithDAO Token.sol
+   */
+  function increaseApproval(address _spender, uint _addedValue) public returns (bool) {
+    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
+    Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
+  function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool) {
+    uint oldValue = allowed[msg.sender][_spender];
+    if (_subtractedValue > oldValue) {
+      allowed[msg.sender][_spender] = 0;
+    } else {
+      allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
     }
-    
-    //Allow token holders to cash out and burn their tokens.
-    //The backend will handle the math and sending the eth since Solidity isn't efficient at math nor is it precise enough.
-    function burn(uint256 _value) constant returns (bool success) {
-        if (!allowTransfers) return false; //Don't allow burning during payouts.
-        if (now < saleStart + (60 days)) return false; //Don't allow burn/cashout for 2 months. TEST
-        _totalSupply -= _value;
-        balances[msg.sender] -= _value;
-        Burn(msg.sender, _value);
-    }
-    
-    mapping (address => uint256) balances;
-    mapping (address => uint256) staking;
-    mapping (address => uint256) rewards;
-    mapping (address => mapping (address => uint256)) allowed;
+    Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
 }
