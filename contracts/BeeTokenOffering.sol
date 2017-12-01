@@ -1,32 +1,6 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.18;
 import "./BeeToken.sol";
-
-
-// Ownable contract has an owner address, and provides basic authorization control functions.
-contract Ownable {
-
-
-    address public owner;
-
-    // Ownable constructor sets the original `owner` of the contract to the sender
-    function Ownable() public {
-        owner = msg.sender;
-    }
-
-    // Throws if called by any account other than the owner.
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    // Allows the current owner to transfer control of the contract to a newOwner.
-    // NewOwner is the address to transfer ownership.
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0));      
-        owner = newOwner;
-    }
-
-}
+import "./Ownable.sol";
 
 
 contract BeeTokenOffering is Ownable {
@@ -60,7 +34,6 @@ contract BeeTokenOffering is Ownable {
 
     // Amount of raised in wei (10**18)
     uint256 public weiRaised;
-    
     uint256 public fundsClaimed; 
 
 
@@ -75,8 +48,10 @@ contract BeeTokenOffering is Ownable {
     uint public dAmount;
 
     // Funding cap in ETH. Change to equal $15M at time of token offering
-    uint public constant FUNDING_ETH_HARD_CAP = 50000;
-    // 1875 Bee($0.16) to Eth($300) => rate = 1875
+    uint public constant FUNDING_ETH_HARD_CAP = 37500;
+    // Reserve fund subject to change
+    uint public constant BEE_RESERVE_FUND = 350000000;
+    // 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
     
     Stages public stage;
     
@@ -129,7 +104,7 @@ contract BeeTokenOffering is Ownable {
         _;
     }
 
-    //mapping (address => uint) public 
+    //mapping(address => uint) public 
     //mapping(address => bool) public registered;
     // Feed whiteList with registered users
     mapping(address => uint8) public whitelist;
@@ -144,24 +119,21 @@ contract BeeTokenOffering is Ownable {
         require(_beneficiary != address(0));
 
 
-        base = _base * (10**17); // convert from BEE to attoBEE*10
-        aAmount = base*30; // Allotted amount per tier in attoBEE
-        bAmount = base*20;
-        cAmount = base*15;
-        dAmount = base*10;
+        base = _base * (10 ** 17); // convert from BEE to attoBEE*10
+        aAmount = base * 30; // Allotted amount per tier in attoBEE
+        bAmount = base * 20;
+        cAmount = base * 15;
+        dAmount = base * 10;
         rate = _rate; // BEE to Ether
         beneficiary = _beneficiary;
         stage = Stages.OfferingDeployed;
-        token.transfer(beneficiary, 250000000*(10**18));
+        token.transfer(beneficiary, BEE_RESERVE_FUND * (10 ** 18));
         // Add event for convenience
     }
 
     // Fallback function can be used to buy tokens
     function () public payable atStage(Stages.OfferingStarted) {
-        buyTokensAList(msg.sender);
-        buyTokensBList(msg.sender);
-        buyTokensCList(msg.sender);
-        buyTokensDList(msg.sender);
+        buyTokensDList();
     }
 
     function ownerSafeWithdrawal() external onlyOwner {
@@ -230,7 +202,8 @@ contract BeeTokenOffering is Ownable {
         // Add event for convenience
     }
     
-    function buyTokensAList(address participant) public payable aLister {
+    function buyTokensAList() public payable aLister {
+        address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
         
@@ -244,14 +217,15 @@ contract BeeTokenOffering is Ownable {
         } else if (now < uncappedTime) {
             require(token.balanceOf(participant) < aAmount*2);
         } else {
-            require(token.balanceOf(participant) < 3000000000000000000000000);
+            require(token.balanceOf(participant) < 150000000 * tokenMultiplier);
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
         forwardFunds();
     }
     
-    function buyTokensBList(address participant) public payable bLister {
+    function buyTokensBList() public payable bLister {
+        address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
         
@@ -263,16 +237,17 @@ contract BeeTokenOffering is Ownable {
         if (now < doubleTime) {
             require(token.balanceOf(address(participant)) < bAmount);
         } else if (now < uncappedTime) {
-            require(token.balanceOf(participant) < bAmount*2);
+            require(token.balanceOf(participant) < bAmount * 2);
         } else {
-            require(token.balanceOf(participant) < 3000000000000000000000000);
+            require(token.balanceOf(participant) < 150000000 * tokenMultiplier);
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
         forwardFunds();
     }
             
-    function buyTokensCList(address participant) public payable cLister {
+    function buyTokensCList() public payable cLister {
+        address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
         
@@ -284,16 +259,17 @@ contract BeeTokenOffering is Ownable {
         if (now < doubleTime) {
             require(token.balanceOf(address(participant)) < cAmount);
         } else if (now < uncappedTime) {
-            require(token.balanceOf(participant) < cAmount*2);
+            require(token.balanceOf(participant) < cAmount * 2);
         } else {
-            require(token.balanceOf(participant) < 3000000000000000000000000);
+            require(token.balanceOf(participant) < 150000000 * tokenMultiplier);
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
         forwardFunds();
     }
             
-    function buyTokensDList(address participant) public payable dLister {
+    function buyTokensDList() public payable dLister {
+        address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
         
@@ -305,9 +281,9 @@ contract BeeTokenOffering is Ownable {
         if (now < doubleTime) {
             require(token.balanceOf(address(participant)) < dAmount);
         } else if (now < uncappedTime) {
-            require(token.balanceOf(participant) < dAmount*2);
+            require(token.balanceOf(participant) < dAmount * 2);
         } else {
-            require(token.balanceOf(participant) < 3000000000000000000000000);
+            require(token.balanceOf(participant) < 150000000 * tokenMultiplier);
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
