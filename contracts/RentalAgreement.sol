@@ -131,11 +131,11 @@ contract RentalAgreement {
         }
     }
 
-    function getHostStatus() public returns (bool ok) {
+    function getHostStatus() public view returns (bool ok) {
         return hostSatisfied;
     }
 
-    function getGuestStatus() public returns (bool ok) {
+    function getGuestStatus() public view returns (bool ok) {
         return guestSatisfied;
     }
 }

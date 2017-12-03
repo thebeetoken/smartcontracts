@@ -13,6 +13,8 @@ contract BeePayments {
         COMPLETED       // payment successful 
     }
 
+    
+    // We can call functions inside of structs. Might be nice to have a callback in here
     struct PaymentStruct {
         
         bytes32 paymentId; // keccak256 hash of all fields

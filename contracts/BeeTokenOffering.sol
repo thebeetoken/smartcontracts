@@ -1,20 +1,23 @@
 pragma solidity ^0.4.18;
 import "./BeeToken.sol";
-import "./Ownable.sol";
+import "./lifecycle/Pausable.sol";
 
 
-contract BeeTokenOffering is Ownable {
+contract BeeTokenOffering is Pausable {
 
     
     using SafeMath for uint256;
     using SafeMath for uint;
-
+    
+    //uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
     uint public tokensForSale;
     uint public tokenMultiplier;
+    bool public fundingCapReached = false;
+    bool public saleClosed = false;
     
     // Participants may clain tokens 7 days after purchase
     uint public constant CLAIM_DELAY = 7 days;
@@ -34,7 +37,7 @@ contract BeeTokenOffering is Ownable {
 
     // Amount of raised in wei (10**18)
     uint256 public weiRaised;
-    uint256 public fundsClaimed; 
+    uint256 public fundsClaimed;
 
 
     // Replace with real start and end times based off of strategy document
@@ -48,16 +51,14 @@ contract BeeTokenOffering is Ownable {
     uint public dAmount;
 
     // Funding cap in ETH. Change to equal $15M at time of token offering
-    uint public constant FUNDING_ETH_HARD_CAP = 37500;
+    uint public constant FUNDING_ETH_HARD_CAP = 37500 * 1 ether;
     // Reserve fund subject to change
-    uint public constant BEE_RESERVE_FUND = 350000000;
     // 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
     
     Stages public stage;
     
     enum Stages { 
-        OfferingDeployed,
-        FinishSetup,
+        Setup,
         OfferingStarted,
         OfferingEnded,
         Distributed
@@ -113,41 +114,12 @@ contract BeeTokenOffering is Ownable {
     function BeeTokenOffering(
         uint256 _rate, 
         address _beneficiary, 
-        uint256 _base) public {
+        uint256 _base,
+        address tokenAddress) public {
         
         require(_rate > 0);
         require(_beneficiary != address(0));
 
-
-        base = _base * (10 ** 17); // convert from BEE to attoBEE*10
-        aAmount = base * 30; // Allotted amount per tier in attoBEE
-        bAmount = base * 20;
-        cAmount = base * 15;
-        dAmount = base * 10;
-        rate = _rate; // BEE to Ether
-        beneficiary = _beneficiary;
-        stage = Stages.OfferingDeployed;
-        token.transfer(beneficiary, BEE_RESERVE_FUND * (10 ** 18));
-        // Add event for convenience
-    }
-
-    // Fallback function can be used to buy tokens
-    function () public payable atStage(Stages.OfferingStarted) {
-        buyTokensDList();
-    }
-
-    function ownerSafeWithdrawal() external onlyOwner {
-        uint balanceToSend = this.balance;
-        beneficiary.transfer(balanceToSend);
-    }
-    // Do we need to register users before whitelisting? 
-    // Add new registered users
-    //function registerUser (address[] users) public onlyOwner {
-    //    for (uint i = 0; i < users.length; i++) {
-    //        registered[users] = true;
-    //}
-    
-    function setup(address tokenAddress) public onlyOwner atStage(Stages.OfferingDeployed) {
         require(tokenAddress != address(0));
         token = BeeToken(tokenAddress);
 
@@ -156,10 +128,29 @@ contract BeeTokenOffering is Ownable {
         // Set the number of the token multiplier for its decimals
         tokenMultiplier = 10 ** uint(token.DECIMALS());
 
-        stage = Stages.FinishSetup;
-        // add event for convenience
-    }            
-    
+        base = _base * (10 ** 17); // convert from BEE to attoBEE*10
+        aAmount = base * 30; // Allotted amount per tier in attoBEE
+        bAmount = base * 20;
+        cAmount = base * 15;
+        dAmount = base * 10;
+        rate = _rate; // BEE to Ether
+        beneficiary = _beneficiary;
+        stage = Stages.Setup;
+        // Add event for convenience
+    }
+
+    // Fallback function can be used to buy tokens
+    function () public payable atStage(Stages.OfferingStarted) {
+        buyTokensDList();
+    }
+
+    // Do we need to register users before whitelisting? 
+    // Add new registered users
+    //function registerUser (address[] users) public onlyOwner {
+    //    for (uint i = 0; i < users.length; i++) {
+    //        registered[users] = true;
+    //}
+          
     // Assign new user tiers
     function whitelistTierA (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
@@ -179,14 +170,13 @@ contract BeeTokenOffering is Ownable {
         }
     }
     
-    
     function whitelistTierD (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
             whitelist[i] = 3;
         }
     }
     
-    function startOffering() public onlyOwner atStage(Stages.FinishSetup) {
+    function startOffering() public onlyOwner atStage(Stages.Setup) {
         stage = Stages.OfferingStarted;
         startTime = now;
         doubleTime = startTime + 48 hours;
@@ -202,7 +192,7 @@ contract BeeTokenOffering is Ownable {
         // Add event for convenience
     }
     
-    function buyTokensAList() public payable aLister {
+    function buyTokensAList() public payable aLister atStage(Stages.OfferingStarted) {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -221,10 +211,9 @@ contract BeeTokenOffering is Ownable {
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
-        forwardFunds();
     }
     
-    function buyTokensBList() public payable bLister {
+    function buyTokensBList() public payable bLister atStage(Stages.OfferingStarted) {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -243,10 +232,9 @@ contract BeeTokenOffering is Ownable {
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
-        forwardFunds();
     }
             
-    function buyTokensCList() public payable cLister {
+    function buyTokensCList() public payable cLister atStage(Stages.OfferingStarted) {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -265,10 +253,9 @@ contract BeeTokenOffering is Ownable {
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
-        forwardFunds();
     }
             
-    function buyTokensDList() public payable dLister {
+    function buyTokensDList() public payable dLister atStage(Stages.OfferingStarted) {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -287,70 +274,47 @@ contract BeeTokenOffering is Ownable {
         }
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
-        forwardFunds();
     }
-           
-    // Need to fix claim and proxyclaim
-    function claimTokens() public atStage(Stages.OfferingEnded) returns (bool) {
-        return proxyClaimTokens(msg.sender);
-    }
-
-    function proxyClaimTokens(address receiverAddress)
-        public
-        atStage(Stages.OfferingEnded)
-        returns (bool)
+    
+    function allocateTokens(address _to, uint amountWei, uint amountAttoBee) public atStage(Stages.OfferingEnded)
+            onlyOwner
     {
-        require(now > endTime + CLAIM_DELAY);
-        require(receiverAddress != address(0));
+        weiRaised = weiRaised.add(amountWei);
+        require(weiRaised <= FUNDING_ETH_HARD_CAP);
 
-        if (contributions[receiverAddress] == 0) {
-            return false;
+        contributions[_to] = contributions[_to].add(amountWei);
+
+        if (!token.transferFrom(token.owner(), _to, amountAttoBee)) {
+            revert();
         }
 
-        // Number of attoBEE
-        uint num = rate * contributions[receiverAddress];
+        updateFundingCap();
+    }
 
-        uint beeTokenOfferingBalance = token.balanceOf(address(this));
-        if (num > beeTokenOfferingBalance) {
-            num = beeTokenOfferingBalance;
+    function ownerSafeWithdrawal() external onlyOwner {
+        uint balanceToSend = this.balance;
+        beneficiary.transfer(balanceToSend);
+    }
+    
+    function updateFundingCap() internal {
+        assert (weiRaised <= FUNDING_ETH_HARD_CAP);
+        if (weiRaised == FUNDING_ETH_HARD_CAP) {
+            // Check if the funding cap has been reached
+            fundingCapReached = true;
+            saleClosed = true;
         }
-
-        // Update the total amount of funds for which tokens have been claimed
-        fundsClaimed += contributions[receiverAddress];
-
-        // Set receiver bid to 0 before assigning tokens
-        contributions[receiverAddress] = 0;
-
-        require(token.transfer(receiverAddress, num));
-
-        // Add event for convenience
-        
-        // Change stage once all tokens have been distributed
-        if (fundsClaimed == weiRaised) {
-            stage = Stages.Distributed;
-            // add event for convenience
-        }
-
-        assert(token.balanceOf(receiverAddress) >= num);
-        assert(contributions[receiverAddress] == 0);
-        return true;
     }
 
     // Return true if ico event has ended
-    function hasEnded() public constant returns (bool) {
+    function hasEnded() public view returns (bool) {
         return now > endTime;
     }
 
-    // Send ether to the fund collection wallet
-    function forwardFunds() internal {
-        beneficiary.transfer(msg.value);
-    }
-
     // Return true if the transaction can buy tokens
-    function validPurchase() internal constant returns (bool) {
+    function validPurchase() internal view returns (bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        bool withinFunding = weiRaised <= FUNDING_ETH_HARD_CAP * 1 ether;  
+        bool withinFunding = weiRaised <= FUNDING_ETH_HARD_CAP;  
         return withinPeriod && nonZeroPurchase && withinFunding;
     }
 
