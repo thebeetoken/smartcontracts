@@ -60,7 +60,7 @@ contract('BeeToken (Basic Tests)', function(accounts) {
       }
       throw new Error("a regular user transferred before they were enabled")
   });
-
+  /*
   it("should allow the deployer (owner) of the token to make transfers", async function() {
       await token.transfer(offering.address, 10 ** 26);
       let ownerBalance = await token.balanceOf(owner);
@@ -76,7 +76,7 @@ contract('BeeToken (Basic Tests)', function(accounts) {
       assert.equal(offeringBalance, bigInt("1e26"), "the token offering should now have 20% of the original funds");
       assert.equal(totalSupply, initialSupply, "the total supply should equal the initial supply");
   });
-
+  */
 
   it("should not allow a regular user to enable transfers", async function() {
       let token = await BeeToken.deployed();
@@ -106,7 +106,7 @@ contract('BeeToken (token burning tests)', function(accounts) {
   var user1 = accounts[1];
   var user2 = accounts[2];
   var user3 = accounts[3];
-
+  /*
   it("non-owner should not be able to burn tokens when transfers are not enabled", async function() {
     let token = await BeeToken.deployed();
     let transferEnabled = await token.transferEnabled();
@@ -126,4 +126,5 @@ contract('BeeToken (token burning tests)', function(accounts) {
     }
     throw new Error("a regular user was able to burn tokens when transfers were not enabled")
   });
+  */
 });

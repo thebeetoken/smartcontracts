@@ -2,24 +2,25 @@ pragma solidity ^0.4.18;
 import "./ownership/Ownable.sol";
 import "./token/StandardToken.sol";
 import "./token/BurnableToken.sol";
+import "./math/SafeMath.sol";
 
 
 contract BeeToken is StandardToken, BurnableToken, Ownable {
     // Note: Token Offering == Initial Coin Offering(ICO)
     // Constants
-    string public constant SYMBOL = "BEE";
-    string public constant NAME = "Bee Token";
-    uint8 public constant DECIMALS = 18;
-    uint public constant DECIMAL_MULTIPLIER = 10 ** uint(DECIMALS);
+    string public constant symbol = "BEE";
+    string public constant name = "Bee Token";
+    uint8 public constant decimals = 18;
+    uint public constant DECIMAL_MULTIPLIER = 10 ** uint(decimals);
     uint256 public constant INITIAL_SUPPLY = 500000000 * DECIMAL_MULTIPLIER;
     uint256 public constant TOKEN_OFFERING_ALLOWANCE = 150000000 * DECIMAL_MULTIPLIER; // Currently 30%
     uint256 public constant ADMIN_ALLOWANCE = 450000000 * DECIMAL_MULTIPLIER; // 70%
     
     
-    uint256 public adminAllowance;
-    uint256 public tokenOfferingAllowance;
-    address public adminAddr;
-    address public tokenOfferingAddr;
+    uint256 public adminAllowance;          // Number of tokens
+    uint256 public tokenOfferingAllowance;  // Number of tokens
+    address public adminAddr;               // Address of token admin
+    address public tokenOfferingAddr;       // Address of token offering
     bool    public transferEnabled = false; // Enable transfers after conclusion of token offering
     
     modifier onlyWhenTransferEnabled() {
@@ -44,8 +45,8 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
         tokenOfferingAllowance = TOKEN_OFFERING_ALLOWANCE;
         adminAllowance = ADMIN_ALLOWANCE;
 
-        // mint all tokens
-        balances[msg.sender] = totalSupply;
+
+        balances[msg.sender] = totalSupply;               // Mint tokens
         Transfer(address(0x0), msg.sender, totalSupply);
 
         adminAddr = _admin;
