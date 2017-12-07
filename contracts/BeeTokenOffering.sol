@@ -202,72 +202,22 @@ contract BeeTokenOffering is Pausable {
     }
     
     function buyTokensAList() public payable aLister atStage(Stages.OfferingStarted) {
-        address participant = msg.sender;
-        require(participant != address(0));
-        require(validPurchase());
-
-        uint256 weiAmount = msg.value;
-
-        // Calculate token amount to be distributed
-        uint256 tokens = weiAmount.mul(rate);
-
-        if (now < doubleTime) {
-            require(contributions[participant] < aAmount);
-        } else if (now < uncappedTime) {
-            require(contributions[participant] < aAmount*2);
-        } else {
-            require(contributions[participant] < 30000 * tokenMultiplier);
-        }
-        contributions[participant] = contributions[participant].add(weiAmount);
-        weiRaised = weiRaised.add(weiAmount);
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);
+        buyTokensList(aAmount);
     }
     
     function buyTokensBList() public payable bLister atStage(Stages.OfferingStarted) {
-        address participant = msg.sender;
-        require(participant != address(0));
-        require(validPurchase());
-
-        uint256 weiAmount = msg.value;
-
-        // Calculate token amount to be distributed
-        uint256 tokens = weiAmount.mul(rate);
-
-        if (now < doubleTime) {
-            require(contributions[participant] < bAmount);
-        } else if (now < uncappedTime) {
-            require(contributions[participant] < bAmount*2);
-        } else {
-            require(contributions[participant] < 30000 * tokenMultiplier);
-        }
-        contributions[participant] = contributions[participant].add(weiAmount);
-        weiRaised = weiRaised.add(weiAmount);
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);
+        buyTokensList(bAmount);
     }
             
     function buyTokensCList() public payable cLister atStage(Stages.OfferingStarted) {
-        address participant = msg.sender;
-        require(participant != address(0));
-        require(validPurchase());
-
-        uint256 weiAmount = msg.value;
-
-        // Calculate token amount to be distributed
-        uint256 tokens = weiAmount.mul(rate);
-
-        if (now < doubleTime) {
-            require(contributions[participant] < cAmount);
-        } else if (now < uncappedTime) {
-            require(contributions[participant] < cAmount*2);
-        } else {
-            require(contributions[participant] < 30000 * tokenMultiplier);
-        }
-        contributions[participant] = contributions[participant].add(weiAmount);
-        weiRaised = weiRaised.add(weiAmount);
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);
+        buyTokensList(cAmount);
     }
 
     function buyTokensDList() public payable dLister atStage(Stages.OfferingStarted) {
+        buyTokensList(dAmount);
+    }
+    
+    function buyTokensList(uint amount) internal payable atStage(Stages.OfferingStarted) {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -278,9 +228,9 @@ contract BeeTokenOffering is Pausable {
         uint256 tokens = weiAmount.mul(rate);
 
         if (now < doubleTime) {
-            require(contributions[participant] < dAmount);
+            require(contributions[participant] < amount);
         } else if (now < uncappedTime) {
-            require(contributions[participant] < dAmount*2);
+            require(contributions[participant] < amount*2);
         } else {
             require(contributions[participant] < 30000 * tokenMultiplier);
         }
