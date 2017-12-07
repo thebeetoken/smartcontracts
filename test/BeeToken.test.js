@@ -36,7 +36,7 @@ contract('BeeToken (Basic Tests)', function(accounts) {
   });
 
   it("should have 18 decimal places", async function() {
-    var decimals = await token.DECIMALS();
+    var decimals = await token.decimals();
     assert.equal(decimals, 18);
   });
 

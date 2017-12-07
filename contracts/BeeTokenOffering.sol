@@ -10,6 +10,8 @@ contract BeeTokenOffering is Pausable {
     using SafeMath for uint;
 
     uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
+    //bool private rentrancy_lock = false; Need if we send tokens with buy orders
+
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
@@ -19,7 +21,7 @@ contract BeeTokenOffering is Pausable {
     bool public fundingCapReached = false;
     bool public saleClosed = false;
 
-    // Participants may clain tokens 7 days after purchase
+    // Participants may claim tokens 7 days after purchase
     uint public constant CLAIM_DELAY = 7 days;
 
     // Address where funds are collected
@@ -33,8 +35,8 @@ contract BeeTokenOffering is Pausable {
     // 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
     uint256 public rate;
 
-    // Base cap for contributions in Eth
-    uint256 public base;
+    // base cap for contributions in Eth
+    uint256 public baseCap;
 
     // Amount of raised in wei (10**18)
     uint256 public weiRaised;
@@ -104,6 +106,14 @@ contract BeeTokenOffering is Pausable {
         require(whitelistD[msg.sender]);
         _;
     }
+    
+    // Recursive call protection (not necessary if using claim delay)
+    /*modifier nonReentrant() {
+        require(!rentrancy_lock);
+        rentrancy_lock = true;
+        _;
+        rentrancy_lock = false;
+    }*/
 
     //mapping(address => bool) public registered;
     // Feed whitelist with registered users
@@ -116,7 +126,7 @@ contract BeeTokenOffering is Pausable {
     function BeeTokenOffering(
         uint256 _rate, 
         address _beneficiary, 
-        uint256 _base,
+        uint256 _baseCap,
         address tokenAddress) public {
 
         require(_rate > 0);
@@ -130,11 +140,11 @@ contract BeeTokenOffering is Pausable {
         // Set the number of the token multiplier for its decimals
         tokenMultiplier = 10 ** uint(token.decimals());
 
-        base = _base * (10 ** 17); // convert from Eth to wei*10
-        aAmount = base * 30; // Allotted amount per tier in wei
-        bAmount = base * 20;
-        cAmount = base * 15;
-        dAmount = base * 10;
+        baseCap = _baseCap * (10 ** 17); // convert from Eth to Decawei
+        aAmount = baseCap * 30; // Contribution cap per tier in wei
+        bAmount = baseCap * 20;
+        cAmount = baseCap * 15;
+        dAmount = baseCap * 10;
         rate = _rate; // BEE to Ether
         beneficiary = _beneficiary;
         stage = Stages.Setup;
@@ -174,7 +184,7 @@ contract BeeTokenOffering is Pausable {
         for (uint32 i = 0; i < users.length; i++) {
             whitelistD[i] = true;
         }
-    }
+    }        
 
     function startOffering() public onlyOwner atStage(Stages.Setup) {
         stage = Stages.OfferingStarted;
@@ -279,7 +289,7 @@ contract BeeTokenOffering is Pausable {
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
     }
 
-    function buy() public payable atStage(Stages.OfferingStarted) {
+    function buy() public payable whenNotPaused atStage(Stages.OfferingStarted) {
         if (whitelistA[msg.sender]) {
             buyTokensAList();
         } else if (whitelistB[msg.sender]) {

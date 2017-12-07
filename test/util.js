@@ -51,7 +51,7 @@ module.exports = {
         console.log("");
     },
 
-    logEthBalances : async function logEthBalances (token, sale, accounts) {
+    logEthBalances : async function logEthBalances (token, offering, accounts) {
         console.log("");
         console.log("Eth Balances:");
         console.log("-------------");
