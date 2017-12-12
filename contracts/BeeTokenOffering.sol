@@ -217,7 +217,7 @@ contract BeeTokenOffering is Pausable {
         buyTokensList(dAmount);
     }
     
-    function buyTokensList(uint amount) internal payable atStage(Stages.OfferingStarted) {
+    function buyTokensList(uint amount) internal {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
