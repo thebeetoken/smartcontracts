@@ -186,11 +186,12 @@ contract BeeTokenOffering is Pausable {
         }
     }        
 
-    function startOffering() public onlyOwner atStage(Stages.Setup) {
+    function startOffering(uint lengthInSeconds) public onlyOwner atStage(Stages.Setup) {
         stage = Stages.OfferingStarted;
         startTime = now;
         doubleTime = startTime + 48 hours;
         uncappedTime = startTime + 96 hours;
+        endTime = startTime + lengthInSeconds;
         // Add event for convenience
     }
 
@@ -215,28 +216,6 @@ contract BeeTokenOffering is Pausable {
 
     function buyTokensDList() public payable dLister atStage(Stages.OfferingStarted) {
         buyTokensList(dAmount);
-    }
-    
-    function buyTokensList(uint amount) internal {
-        address participant = msg.sender;
-        require(participant != address(0));
-        require(validPurchase());
-
-        uint256 weiAmount = msg.value;
-
-        // Calculate token amount to be distributed
-        uint256 tokens = weiAmount.mul(rate);
-
-        if (now < doubleTime) {
-            require(contributions[participant] < amount);
-        } else if (now < uncappedTime) {
-            require(contributions[participant] < amount*2);
-        } else {
-            require(contributions[participant] < 30000 * tokenMultiplier);
-        }
-        contributions[participant] = contributions[participant].add(weiAmount);
-        weiRaised = weiRaised.add(weiAmount);
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);
     }
 
     function buy() public payable whenNotPaused atStage(Stages.OfferingStarted) {
@@ -271,6 +250,28 @@ contract BeeTokenOffering is Pausable {
     // Return true if ico event has ended
     function hasEnded() public view returns (bool) {
         return now > endTime;
+    }
+    
+    function buyTokensList(uint amount) internal {
+        address participant = msg.sender;
+        require(participant != address(0));
+        require(validPurchase());
+
+        uint256 weiAmount = msg.value;
+
+        // Calculate token amount to be distributed
+        uint256 tokens = weiAmount.mul(rate);
+
+        if (now < doubleTime) {
+            require(contributions[participant] < amount);
+        } else if (now < uncappedTime) {
+            require(contributions[participant] < amount*2);
+        } else {
+            require(contributions[participant] < 30000 * tokenMultiplier);
+        }
+        contributions[participant] = contributions[participant].add(weiAmount);
+        weiRaised = weiRaised.add(weiAmount);
+        TokenPurchase(msg.sender, participant, weiAmount, tokens);
     }
 
     function updateFundingCap() internal {
