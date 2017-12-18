@@ -1,9 +1,11 @@
 pragma solidity ^0.4.16;
 
+import '../contracts/token/ERC20.sol';
+import '../contracts/math/SafeMath.sol';
 
 contract BeePayments {
-    
-    
+
+
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
         INITIALIZED,    // awaiting payment from supply & demand entities
@@ -16,9 +18,10 @@ contract BeePayments {
     
     // We can call functions inside of structs. Might be nice to have a callback in here
     struct PaymentStruct {
-        
-        bytes32 paymentId; // keccak256 hash of all fields
+        bool exist;
         PaymentStatus paymentStatus;
+        bytes32 paymentId; // keccak256 hash of all fields
+        address paymentTokenContractAddress;
         address supplyEntityAddress;
         address demandEntityAddress;
         address arbitrationAddress;
@@ -29,6 +32,8 @@ contract BeePayments {
         uint supplyCancellationFee;
         uint supplyCancelByTimeInS;
         uint paymentDispatchTimeInS;
+        bool demandPaid;
+        bool supplyPaid;
     }
     
     // TODO: define events
@@ -37,10 +42,23 @@ contract BeePayments {
     event DisputePayment();
     
     // TODO: define modifiers
-    modifier demandPaid(bytes32 _paymentHash) {
+    modifier demandPaid(bytes32 paymentId) {
         _;
     }
-    modifier supplyPaid(bytes32 _paymentHash) {
+    modifier supplyPaid(bytes32 paymentId) {
+        _;
+    }
+
+    modifier demandOrSupplyEntity(bytes32 paymentId) {
+        require(
+            msg.sender == allPayments[paymentId].demandEntityAddress ||
+            msg.sender == allPayments[paymentId].supplyEntityAddress
+        );
+        _;
+    }
+
+    modifier onlyPaymentStatus(bytes32 paymentId, PaymentStatus paymentStatus) {
+        require(allPayments[paymentId].paymentStatus == paymentStatus);
         _;
     }
     
@@ -59,9 +77,7 @@ contract BeePayments {
     
     function BeePayments() public {}
 
-    function () public payable {
-        _;
-    }
+    function () public payable {}
     
     /**
      * Initializes a new payment, and awaits for supply & demand entities to
@@ -69,22 +85,80 @@ contract BeePayments {
      * 
      * @return a payment id for the caller to keep.
      */
-    function initPayment() public returns(bytes32) {
-        // TODO: create a new payment struct and add to the allPayments mapping
-        return 0;
+    function initPayment(
+        bytes32 paymentId,
+        address paymentTokenContractAddress,
+        address demandEntityAddress,
+        address supplyEntityAddress,
+        address arbitrationAddress,
+        uint cost,
+        uint securityDeposit,
+        uint demandCancellationFee,
+        uint demandCancelByTimeInS,
+        uint supplyCancellationFee,
+        uint supplyCancelByTimeInS,
+        uint paymentDispatchTimeInS
+    ) public returns(bool) {
+        if (allPayments[paymentId].exist) {
+            revert();
+            // return false;
+        }
+
+        allPayments[paymentId] = PaymentStruct(
+            true,
+            PaymentStatus.INITIALIZED,
+            paymentId,
+            paymentTokenContractAddress,
+            demandEntityAddress,
+            supplyEntityAddress,
+            arbitrationAddress,
+            cost,
+            securityDeposit,
+            demandCancellationFee,
+            demandCancelByTimeInS,
+            supplyCancellationFee,
+            supplyCancelByTimeInS,
+            paymentDispatchTimeInS,
+            false,
+            false
+        );
+        return true;
     }
     
     /**
      * To be invoked by entities to pay.
      */
-    function pay(bytes32 paymentHash) 
-        public
-        payable
-        demandPaid(paymentHash)
-        supplyPaid(paymentHash) {
-            // TODO: once the full amount is reached, move from initialized to 
-            // in progress
+    function pay(
+        bytes32 paymentId
+    ) public payable onlyPaymentStatus(paymentId, PaymentStatus.INITIALIZED) demandOrSupplyEntity(paymentId) returns (bool) {
+        PaymentStruct storage payment = allPayments[paymentId];
+        ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
+        if (msg.sender == payment.demandEntityAddress) {
+            uint256 amountToPay = SafeMath.add(
+                payment.securityDeposit,
+                SafeMath.add(
+                    payment.demandCancellationFee,
+                    payment.cost
+                )
+            );
+            if (tokenContract.approve(this, amountToPay)) {
+                payment.demandPaid = true;
+            } else {
+                return false;
+            }
+        } else {
+            if (tokenContract.approve(this, payment.supplyCancellationFee)) {
+                payment.supplyPaid = true;
+            } else {
+                return false;
+            }
         }
+
+        if (payment.demandPaid && payment.supplyPaid) {
+            payment.paymentStatus = PaymentStatus.IN_PROGRESS;
+        }
+        return true;
+    }
     
     /**
      * Dispatches in progress payments daily based on paymentDispatchTimeInS.
@@ -98,7 +172,7 @@ contract BeePayments {
      * Cancels that payment in progress. Runs canclation rules as appropriate.
      * @return true if cancel is successful, false otherwise
      */ 
-    function cancelPayment(bytes32 paymentHash) public returns(bool) {
+    function cancelPayment(bytes32 paymentId) public returns(bool) {
         // TODO: check cancelation rules and pay as appropirate
         // TODO: move payment from in progress to cancel
     }
@@ -106,7 +180,7 @@ contract BeePayments {
     /**
      * Moves the in progress payment into arbitration.
      */ 
-    function disputePayment(bytes32 paymentHash) public {
+    function disputePayment(bytes32 paymentId) public {
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
     }
@@ -115,12 +189,15 @@ contract BeePayments {
      * Used to get all info about the payment.
      * @return all info of the payment, including payment id and status.
      */
-    function getPaymentStatus(bytes32 paymentHash)
+    function getPaymentStatus(bytes32 paymentId)
         public
         constant
         returns(PaymentStruct) {
-            // TODO: return NOT_FOUND if payment not present.
-            return allPayments[paymentHash];
+            if (allPayments[paymentId].exist) {
+                return allPayments[paymentId];
+            } else {
+                revert();
+            }
         }
     
     // TODO: createPaymentStruct and createPaymentId
