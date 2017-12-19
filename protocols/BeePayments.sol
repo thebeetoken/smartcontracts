@@ -1,10 +1,15 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.18;
 
-import '../contracts/token/ERC20.sol';
+import '../contracts/token/StandardToken.sol';
 import '../contracts/math/SafeMath.sol';
 
-contract BeePayments {
 
+contract BeePayments is Ownable{ 
+    
+    
+    using SafeMath for uint;
+    address public arbitrationAddress;
+    uint arbitrationFee; // tbd. 
 
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
@@ -15,7 +20,6 @@ contract BeePayments {
         COMPLETED       // payment successful 
     }
 
-    
     // We can call functions inside of structs. Might be nice to have a callback in here
     struct PaymentStruct {
         bool exist;
@@ -24,13 +28,11 @@ contract BeePayments {
         address paymentTokenContractAddress;
         address supplyEntityAddress;
         address demandEntityAddress;
-        address arbitrationAddress;
         uint cost;
         uint securityDeposit;
         uint demandCancellationFee;
-        uint demandCancelByTimeInS;
         uint supplyCancellationFee;
-        uint supplyCancelByTimeInS;
+        uint cancelDeadlineInS;
         uint paymentDispatchTimeInS;
         bool demandPaid;
         bool supplyPaid;
@@ -45,6 +47,7 @@ contract BeePayments {
     modifier demandPaid(bytes32 paymentId) {
         _;
     }
+    
     modifier supplyPaid(bytes32 paymentId) {
         _;
     }
@@ -62,22 +65,31 @@ contract BeePayments {
         _;
     }
     
-    // maps the paymentIds to the struct
-    mapping (bytes32 => PaymentStruct) allPayments;
-    // newly initialized payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) initializedPayments;
-    // payments in flight: day in sec => list of payment ids (hashes)
-    mapping (uint => bytes32[]) inProgressPayments;  // 
-    // paymentes in arbitration: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) inArbitrationPayments;
-    // completed payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) completedPayments;
-    // canceled payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) canceledPayments;
     
-    function BeePayments() public {}
+    // maps the paymentIds to the struct
+    mapping (bytes32 => PaymentStruct) public allPayments;
+    // newly initialized payments: paymentIds => amount of tokens expected
+    mapping (bytes32 => uint) public initializedPayments;
+    // payments in flight: day in sec => list of payment ids (hashes)
+    mapping (uint => bytes32[]) public inProgressPayments;  // 
+    // paymentes in arbitration: paymentIds => amount of tokens expected
+    mapping (bytes32 => uint) public inArbitrationPayments;
+    // completed payments: paymentIds => amount of tokens expected
+    mapping (bytes32 => uint) public completedPayments;
+    // canceled payments: paymentIds => amount of tokens expected
+    mapping (bytes32 => uint) public canceledPayments;
+    // maps token address to mapping of payment balances. Make sure only admin can update token contract list
+    //mapping (address => mapping (address => uint)) public tokenContract;
+    
+    function BeePayments(address admin_, address arbitrationAddress_) public {
+        arbitrationAddress = arbitrationAddress_;
+    }
 
     function () public payable {}
+    
+    function updateArbitrationAddress(address arbitrationAddress_) public onlyOwner {
+        arbitrationAddress = arbitrationAddress_;
+    }
     
     /**
      * Initializes a new payment, and awaits for supply & demand entities to
@@ -90,15 +102,14 @@ contract BeePayments {
         address paymentTokenContractAddress,
         address demandEntityAddress,
         address supplyEntityAddress,
-        address arbitrationAddress,
         uint cost,
         uint securityDeposit,
         uint demandCancellationFee,
-        uint demandCancelByTimeInS,
         uint supplyCancellationFee,
-        uint supplyCancelByTimeInS,
+        uint cancelDeadlineInS,
         uint paymentDispatchTimeInS
-    ) public returns(bool) {
+    ) public onlyOwner returns(bool)
+    {
         if (allPayments[paymentId].exist) {
             revert();
             // return false;
@@ -111,13 +122,11 @@ contract BeePayments {
             paymentTokenContractAddress,
             demandEntityAddress,
             supplyEntityAddress,
-            arbitrationAddress,
             cost,
             securityDeposit,
             demandCancellationFee,
-            demandCancelByTimeInS,
             supplyCancellationFee,
-            supplyCancelByTimeInS,
+            cancelDeadlineInS,
             paymentDispatchTimeInS,
             false,
             false
@@ -130,7 +139,12 @@ contract BeePayments {
      */
     function pay(
         bytes32 paymentId
-    ) public payable onlyPaymentStatus(paymentId, PaymentStatus.INITIALIZED) demandOrSupplyEntity(paymentId) returns (bool) {
+    ) public
+    payable
+    onlyPaymentStatus(paymentId, PaymentStatus.INITIALIZED)
+    demandOrSupplyEntity(paymentId)
+    returns (bool)
+    {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
         if (msg.sender == payment.demandEntityAddress) {
@@ -162,27 +176,38 @@ contract BeePayments {
     
     /**
      * Dispatches in progress payments daily based on paymentDispatchTimeInS.
-     */ 
-    function dispatchPayments() public {
+     */
+    function dispatchPayments() public pure {
         // TODO: check daily in progress payments, and pay appropirate accounts.
         // TODO: move successful payments from in progress to completed
+        revert();
     }
     
     /**
      * Cancels that payment in progress. Runs canclation rules as appropriate.
      * @return true if cancel is successful, false otherwise
      */ 
-    function cancelPayment(bytes32 paymentId) public returns(bool) {
+    function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool) {
         // TODO: check cancelation rules and pay as appropirate
         // TODO: move payment from in progress to cancel
+        if(msg.sender == payment.demandEntityAddress) {
+            // transfer demandCancellationFee to supply entity
+            
+            // return funds to respective entities
+            
+        }
     }
     
     /**
      * Moves the in progress payment into arbitration.
      */ 
-    function disputePayment(bytes32 paymentId) public {
+    function disputePayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId){
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
+        if(msg.sender == payment.demandEntityAddress) {
+            // msg.sender pays arbitrationFee
+            // decrease token amount of sender, transfer it to arbitration address
+        }
     }
     
     /**
@@ -191,23 +216,24 @@ contract BeePayments {
      */
     function getPaymentStatus(bytes32 paymentId)
         public
-        constant
-        returns(PaymentStruct) {
-            if (allPayments[paymentId].exist) {
-                return allPayments[paymentId];
-            } else {
-                revert();
-            }
+        view
+        returns(PaymentStruct)
+    {
+        if (allPayments[paymentId].exist) {
+            return allPayments[paymentId];
+        } else {
+            revert();
         }
+    }
     
     // TODO: createPaymentStruct and createPaymentId
     /*
-    function createPaymentStruct() private
+    function createPaymentStruct() internal
         returns(PaymentStruct) {
         return 0;
     }
     
-    function createPaymentId() private
+    function createPaymentId() internal
         returns(bytes32) {
         return 0;
     }
