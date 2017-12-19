@@ -186,12 +186,12 @@ contract BeeTokenOffering is Pausable {
         }
     }        
 
-    function startOffering(uint lengthInSeconds) public onlyOwner atStage(Stages.Setup) {
+    function startOffering(uint durationInSeconds) public onlyOwner atStage(Stages.Setup) {
         stage = Stages.OfferingStarted;
         startTime = now;
         doubleTime = startTime + 48 hours;
         uncappedTime = startTime + 96 hours;
-        endTime = startTime + lengthInSeconds;
+        endTime = startTime + durationInSeconds;
         // Add event for convenience
     }
 
