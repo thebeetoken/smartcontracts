@@ -4,12 +4,12 @@ import '../contracts/token/StandardToken.sol';
 import '../contracts/math/SafeMath.sol';
 
 
-contract BeePayments is Ownable{ 
+contract BeePayments is Ownable { 
     
     
     using SafeMath for uint;
     address public arbitrationAddress;
-    uint arbitrationFee; // tbd. 
+    uint public arbitrationFee; // tbd. 
 
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
@@ -39,9 +39,9 @@ contract BeePayments is Ownable{
     }
     
     // TODO: define events
-    event Pay();
-    event CancelPayment();
-    event DisputePayment();
+    //event Pay();
+    //event CancelPayment();
+    //event DisputePayment();
     
     // TODO: define modifiers
     modifier demandPaid(bytes32 paymentId) {
@@ -81,11 +81,13 @@ contract BeePayments is Ownable{
     // maps token address to mapping of payment balances. Make sure only admin can update token contract list
     //mapping (address => mapping (address => uint)) public tokenContract;
     
-    function BeePayments(address admin_, address arbitrationAddress_) public {
+    function BeePayments(address arbitrationAddress_) public {
         arbitrationAddress = arbitrationAddress_;
     }
 
-    function () public payable {}
+    function () public payable {
+        revert();
+    }
     
     function updateArbitrationAddress(address arbitrationAddress_) public onlyOwner {
         arbitrationAddress = arbitrationAddress_;
@@ -137,6 +139,7 @@ contract BeePayments is Ownable{
     /**
      * To be invoked by entities to pay.
      */
+    // must call approve on token contract to allow pay to transfer on their behalf
     function pay(
         bytes32 paymentId
     ) public
@@ -155,13 +158,13 @@ contract BeePayments is Ownable{
                     payment.cost
                 )
             );
-            if (tokenContract.approve(this, amountToPay)) {
+            if (tokenContract.transferFrom(msg.sender, this, amountToPay)) {
                 payment.demandPaid = true;
             } else {
                 return false;
             }
         } else {
-            if (tokenContract.approve(this, payment.supplyCancellationFee)) {
+            if (tokenContract.transferFrom(msg.sender, this, payment.supplyCancellationFee)) {
                 payment.supplyPaid = true;
             } else {
                 return false;
@@ -180,6 +183,8 @@ contract BeePayments is Ownable{
     function dispatchPayments() public pure {
         // TODO: check daily in progress payments, and pay appropirate accounts.
         // TODO: move successful payments from in progress to completed
+        // check gas costs - limit iterating through every IN_PROGRESS payment 
+        
         revert();
     }
     
@@ -190,35 +195,96 @@ contract BeePayments is Ownable{
     function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool) {
         // TODO: check cancelation rules and pay as appropirate
         // TODO: move payment from in progress to cancel
-        if(msg.sender == payment.demandEntityAddress) {
+        PaymentStruct storage payment = allPayments[paymentId];
+        ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
+        // replace now with oracle time
+        if (payment.cancelDeadlineInS < now) {
+            uint amountReturnedDemand = SafeMath.add(
+                payment.securityDeposit,
+                SafeMath.add(
+                    payment.demandCancellationFee,
+                    payment.cost
+                )
+            );
+            if (tokenContract.transfer(msg.sender, amountReturnedDemand)
+                && tokenContract.transfer(payment.supplyEntityAddress, payment.supplyCancellationFee)) {
+                payment.paymentStatus = PaymentStatus.CANCELED;
+            } else {
+                return false;
+            }
+        } else {
+            if (msg.sender == payment.demandEntityAddress) {
             // transfer demandCancellationFee to supply entity
-            
-            // return funds to respective entities
-            
+                amountReturnedDemand = SafeMath.add(
+                    payment.securityDeposit,
+                    payment.cost
+                );
+                uint amountReturnedSupply = SafeMath.add(
+                    payment.supplyCancellationFee,
+                    payment.demandCancellationFee
+                );
+                if (tokenContract.transfer(msg.sender, amountReturnedDemand)
+                    && tokenContract.transfer(payment.supplyEntityAddress, amountReturnedSupply)) {
+                    payment.paymentStatus = PaymentStatus.CANCELED;
+                } else {
+                    return false;
+                }
+            } else {
+                amountReturnedDemand = SafeMath.add(
+                    payment.securityDeposit,
+                    SafeMath.add(
+                        payment.cost,
+                        SafeMath.add(
+                            payment.supplyCancellationFee,
+                            payment.demandCancellationFee)
+                    )
+                );
+                if (tokenContract.transfer(msg.sender, amountReturnedDemand)) {
+                    payment.paymentStatus = PaymentStatus.CANCELED;
+                }
+            }
         }
+        return true;
     }
-    
     /**
      * Moves the in progress payment into arbitration.
      */ 
-    function disputePayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId){
+    
+    function disputePayment(bytes32 paymentId, uint arbitrationFee_) 
+    public
+    demandOrSupplyEntity(paymentId)
+    returns(bool)
+    {
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
-        if(msg.sender == payment.demandEntityAddress) {
-            // msg.sender pays arbitrationFee
-            // decrease token amount of sender, transfer it to arbitration address
+        PaymentStruct storage payment = allPayments[paymentId];
+        ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
+        arbitrationFee = arbitrationFee_;
+        uint256 total = SafeMath.add(
+            payment.securityDeposit,
+            SafeMath.add(
+                payment.demandCancellationFee,
+                SafeMath.add(
+                    payment.cost,
+                    payment.supplyCancellationFee
+                )
+            )
+        ); 
+            
+        if (tokenContract.transferFrom(msg.sender, arbitrationAddress, arbitrationFee)
+            && tokenContract.transfer(arbitrationAddress, total)) {
+            payment.paymentStatus = PaymentStatus.IN_ARBITRATION;
+        } else {
+            return false;
         }
+        return true;  
     }
-    
     /**
      * Used to get all info about the payment.
      * @return all info of the payment, including payment id and status.
      */
-    function getPaymentStatus(bytes32 paymentId)
-        public
-        view
-        returns(PaymentStruct)
-    {
+     
+    function getPaymentStatus(bytes32 paymentId) public view returns(PaymentStruct) {
         if (allPayments[paymentId].exist) {
             return allPayments[paymentId];
         } else {
