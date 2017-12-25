@@ -11,10 +11,9 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
     string public constant symbol = "BEE";
     string public constant name = "Bee Token";
     uint8 public constant decimals = 18;
-    uint public constant DECIMAL_MULTIPLIER = 10 ** uint(decimals);
-    uint256 public constant INITIAL_SUPPLY = 500000000 * DECIMAL_MULTIPLIER;
-    uint256 public constant TOKEN_OFFERING_ALLOWANCE = 150000000 * DECIMAL_MULTIPLIER; // Currently 30%
-    uint256 public constant ADMIN_ALLOWANCE = 450000000 * DECIMAL_MULTIPLIER; // 70%
+    uint256 public constant INITIAL_SUPPLY = 500000000 * 1 ether;
+    uint256 public constant TOKEN_OFFERING_ALLOWANCE = 150000000 * 1 ether; // Currently 30%
+    uint256 public constant ADMIN_ALLOWANCE = 450000000 * 1 ether; // 70%
     
     
     uint256 public adminAllowance;          // Number of tokens

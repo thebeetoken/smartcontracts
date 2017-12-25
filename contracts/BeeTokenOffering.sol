@@ -10,19 +10,15 @@ contract BeeTokenOffering is Pausable {
     using SafeMath for uint;
 
     uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
-    //bool private rentrancy_lock = false; Need if we send tokens with buy orders
+    bool private reentryLock = false;
 
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
     uint public tokensForSale;
-    uint public tokenMultiplier;
     bool public fundingCapReached = false;
     bool public saleClosed = false;
-
-    // Participants may claim tokens 7 days after purchase
-    uint public constant CLAIM_DELAY = 7 days;
 
     // Address where funds are collected
     address public beneficiary;
@@ -107,16 +103,14 @@ contract BeeTokenOffering is Pausable {
         _;
     }
     
-    // Recursive call protection (not necessary if using claim delay)
-    /*modifier nonReentrant() {
-        require(!rentrancy_lock);
-        rentrancy_lock = true;
+    // Recursive call protection 
+    modifier nonReentrant() {
+        require(!reentryLock);
+        reentryLock = true;
         _;
-        rentrancy_lock = false;
-    }*/
+        reentryLock = false;
+    }
 
-    //mapping(address => bool) public registered;
-    // Feed whitelist with registered users
     mapping(address => bool) public whitelistA;
     mapping(address => bool) public whitelistB;
     mapping(address => bool) public whitelistC;
@@ -135,11 +129,6 @@ contract BeeTokenOffering is Pausable {
         require(tokenAddress != address(0));
         token = BeeToken(tokenAddress);
 
-        tokensForSale = token.balanceOf(address(this));
-
-        // Set the number of the token multiplier for its decimals
-        tokenMultiplier = 10 ** uint(token.decimals());
-
         baseCap = _baseCap * (10 ** 17); // convert from Eth to Decawei
         aAmount = baseCap * 30; // Contribution cap per tier in wei
         bAmount = baseCap * 20;
@@ -151,7 +140,7 @@ contract BeeTokenOffering is Pausable {
         // Add event for convenience
     }
 
-    // Fallback function can not be used to buy tokens
+    // Fallback function can be used to buy tokens
     function () public payable {
         buy();
     }
@@ -164,25 +153,25 @@ contract BeeTokenOffering is Pausable {
     // Assign new user tiers
     function whitelistTierA (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
-            whitelistA[i] = true;
+            whitelistA[users[i]] = true;
         }
     }
 
     function whitelistTierB (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
-            whitelistB[i] = true;
+            whitelistB[users[i]] = true;
         }
     }
 
     function whitelistTierC (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
-            whitelistC[i] = true;
+            whitelistC[users[i]] = true;
         }
     }
 
     function whitelistTierD (address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
-            whitelistD[i] = true;
+            whitelistD[users[i]] = true;
         }
     }        
 
@@ -202,19 +191,19 @@ contract BeeTokenOffering is Pausable {
         // Add event for convenience
     }
     
-    function buyTokensAList() public payable aLister atStage(Stages.OfferingStarted) {
+    function buyTokensAList() public payable whenNotPaused aLister atStage(Stages.OfferingStarted) {
         buyTokensList(aAmount);
     }
     
-    function buyTokensBList() public payable bLister atStage(Stages.OfferingStarted) {
+    function buyTokensBList() public payable whenNotPaused bLister atStage(Stages.OfferingStarted) {
         buyTokensList(bAmount);
     }
             
-    function buyTokensCList() public payable cLister atStage(Stages.OfferingStarted) {
+    function buyTokensCList() public payable whenNotPaused cLister atStage(Stages.OfferingStarted) {
         buyTokensList(cAmount);
     }
 
-    function buyTokensDList() public payable dLister atStage(Stages.OfferingStarted) {
+    function buyTokensDList() public payable whenNotPaused dLister atStage(Stages.OfferingStarted) {
         buyTokensList(dAmount);
     }
 
@@ -232,8 +221,10 @@ contract BeeTokenOffering is Pausable {
         }
     }
 
-    function allocateTokens(address _to, uint amountWei, uint amountAttoBee) public atStage(Stages.OfferingEnded)
-            onlyOwner
+    function allocateTokens(address _to, uint amountWei, uint amountAttoBee)
+        public
+        onlyOwner
+        nonReentrant
     {
         weiRaised = weiRaised.add(amountWei);
         require(weiRaised <= FUNDING_ETH_HARD_CAP);
@@ -245,6 +236,17 @@ contract BeeTokenOffering is Pausable {
         }
 
         updateFundingCap();
+    }
+    
+    function allocateTokensArray(address[] _to, uint[] amountWei, uint[] amountAttoBee)
+        external
+        onlyOwner
+    {
+        require(_to.length == amountWei.length);
+        require(_to.length == amountAttoBee.length);
+        for (uint i = 0; i < _to.length; i++) {
+            allocateTokens(_to[i], amountWei[i], amountAttoBee[i]);
+        }
     }
 
     // Return true if ico event has ended
@@ -267,7 +269,7 @@ contract BeeTokenOffering is Pausable {
         } else if (now < uncappedTime) {
             require(contributions[participant] < amount*2);
         } else {
-            require(contributions[participant] < 30000 * tokenMultiplier);
+            require(contributions[participant] < 30000 * 1 ether);
         }
         contributions[participant] = contributions[participant].add(weiAmount);
         weiRaised = weiRaised.add(weiAmount);
