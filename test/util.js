@@ -75,6 +75,10 @@ module.exports = {
     oneEther : toEther(1),
     twoEther : toEther(2),
     threeEther : toEther(3),
+    fourEther : toEther(4),
+    fiveEther : toEther(5),
+    sixEther : toEther(6),
+    eightEther : toEther(8), 
     tenEther : toEther(10),
     hundredEther : toEther(100),
 
