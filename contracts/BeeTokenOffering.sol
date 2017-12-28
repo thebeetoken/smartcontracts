@@ -8,7 +8,7 @@ contract BeeTokenOffering is Pausable {
     using SafeMath for uint256;
     using SafeMath for uint;
 
-    uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
+    //uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
     bool private reentryLock = false;
 
 
@@ -23,7 +23,6 @@ contract BeeTokenOffering is Pausable {
     address public beneficiary;
 
     // Token to be sold
-    //address public constant token = tokenContract();
     BeeToken public token;
 
     // Tokens per ether
@@ -144,7 +143,7 @@ contract BeeTokenOffering is Pausable {
         buy();
     }
 
-    function ownerSafeWithdrawal() external onlyOwner {
+    function ownerSafeWithdrawal() external onlyOwner nonReentrant {
         uint balanceToSend = this.balance;
         beneficiary.transfer(balanceToSend);
     }
@@ -226,7 +225,6 @@ contract BeeTokenOffering is Pausable {
         nonReentrant
     {
         weiRaised = weiRaised.add(amountWei);
-        require(weiRaised <= FUNDING_ETH_HARD_CAP);
 
         contributions[_to] = contributions[_to].add(amountWei);
 
@@ -273,14 +271,17 @@ contract BeeTokenOffering is Pausable {
         contributions[participant] = contributions[participant].add(weiAmount);
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
+        updateFundingCap();
     }
 
     function updateFundingCap() internal {
         assert(weiRaised <= FUNDING_ETH_HARD_CAP);
-        if (weiRaised == FUNDING_ETH_HARD_CAP) {
+        if (weiRaised >= FUNDING_ETH_HARD_CAP) {
             // Check if the funding cap has been reached
             fundingCapReached = true;
             saleClosed = true;
+            stage = Stages.OfferingEnded;
+
         }
     }
 
