@@ -8,7 +8,7 @@
 `BeeTokenOffering.sol` strategy is as follows:
 
 * In order to participate users must be whitelisted.
-* During the first 48 hours, more engaged users will have the opportunity to purchase more tokens. Tier A-D will be able to contribute 300%, 200%, 150%, and 100%, respectively, of the base contribution amount described by: Base(Tier D) = ETH hard cap / (#A*3 + #B*2 + #C*1.5 + #D)
+* During the first 48 hours, more engaged users will have the opportunity to purchase more tokens. Tier A-D will be able to contribute 300%, 200%, 150%, and 100%, respectively, of the base contribution amount described by: Base(Tier D) = ETH hard cap / (#A\*3 + #B\*2 + #C*1.5 + #D)
  * #T = number of people in respective tier
 * After the first 48 hours, if tokens have not sold out, all users will have their allocations increased up to double their original amount. This period will last for 48 hours. 
 * After 96 hours, any remaining tokens can be purchased by whitelisted users without restrictions up until the end date.
