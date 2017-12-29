@@ -8,7 +8,7 @@
 
     `npm test` or `./node_modules/.bin/truffle test`
 
-- Run single tests
+- Run single test
 
     `./node_modules/./bin/truffle test test/BeeToken.test.js`
 
