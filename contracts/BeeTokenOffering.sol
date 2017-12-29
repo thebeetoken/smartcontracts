@@ -266,9 +266,16 @@ contract BeeTokenOffering is Pausable {
         } else {
             require(contributions[participant] + weiAmount < 30000 * 1 ether);
         }
+        
+        weiRaised = weiRaised.add(weiAmount);
         contributions[participant] = contributions[participant].add(weiAmount);
-        allocateTokens(participant, weiAmount, tokens);
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);
+
+        if (!token.transferFrom(token.owner(), participant, tokens)) {
+            revert();
+        }
+        
+        TokenPurchase(msg.sender, participant, weiAmount, tokens);       
+        updateFundingCap();
     }
 
     function updateFundingCap() internal {
@@ -283,7 +290,7 @@ contract BeeTokenOffering is Pausable {
     function validPurchase() internal view returns (bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        bool withinFunding = weiRaised + msg.value <= FUNDING_ETH_HARD_CAP;  
+        bool withinFunding = weiRaised <= FUNDING_ETH_HARD_CAP;  
         return withinPeriod && nonZeroPurchase && withinFunding;
     }
 
