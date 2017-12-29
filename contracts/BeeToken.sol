@@ -1,8 +1,8 @@
 pragma solidity ^0.4.18; 
-import "./ownership/Ownable.sol";
-import "./token/StandardToken.sol";
-import "./token/BurnableToken.sol";
-import "./math/SafeMath.sol";
+import "../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/zeppelin-solidity/contracts/token/StandardToken.sol";
+import "../node_modules/zeppelin-solidity/contracts/token/BurnableToken.sol";
+import "../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 contract BeeToken is StandardToken, BurnableToken, Ownable {
