@@ -52,14 +52,14 @@ contract('BeeTokenOffering constructor', function(accounts) {
       // 1 ETH is well below the cap
       const contribution1 = 1;
       await sendTransaction(contribution1, user2);
-      //assert.equal(await balanceOf(user2), util.toEther(await offering.rate()));
+      assert.equal(await balanceOf(user2), util.toEther(await offering.rate()));
       assert.equal((await offering.weiRaised()).toNumber(), util.toEther(contribution1));
 
       // Sending more ETH to reach the cap
       const contribution2 = 4;
       const sum = contribution1 + contribution2;
       await sendTransaction(contribution2, user2);
-      //assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
+      assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
       assert.equal((await offering.weiRaised()).toNumber(), util.toEther(sum));
   });
 
