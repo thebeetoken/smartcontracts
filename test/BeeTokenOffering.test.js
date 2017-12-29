@@ -45,19 +45,19 @@ contract('BeeTokenOffering constructor', function(accounts) {
   });
 */
   it("should sell tokens at a prespecified rate", async function() {
-      //await token.setTokenOffering(offering.address, 0);
-      //await offering.startOffering(300);
+      await token.setTokenOffering(offering.address, 0);
+      await offering.startOffering(300);
       await whitelistTierA(user2);
 
       // 1 ETH is well below the cap
       const contribution1 = 1;
       await sendTransaction(contribution1, user2);
       //assert.equal(await balanceOf(user2), util.toEther(await offering.rate()));
-      assert.equal((await offering.weiRaised()).toNumber(), util.toEther(contribution1 + 16));
+      assert.equal((await offering.weiRaised()).toNumber(), util.toEther(contribution1));
 
       // Sending more ETH to reach the cap
       const contribution2 = 4;
-      const sum = contribution1 + contribution2 + 16;
+      const sum = contribution1 + contribution2;
       await sendTransaction(contribution2, user2);
       //assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
       assert.equal((await offering.weiRaised()).toNumber(), util.toEther(sum));
@@ -72,7 +72,7 @@ contract('BeeTokenOffering constructor', function(accounts) {
       //await token.setTokenOffering(offering.address, 0);
       await util.expectThrow(sendTransaction(0, user5));
   });
-
+/*
   it("should reach the cap", async function() {
       //await token.setTokenOffering(offering.address, 0);
       //await offering.startOffering(300);
@@ -80,7 +80,7 @@ contract('BeeTokenOffering constructor', function(accounts) {
       await sendTransaction(13, user5);
       assert.equal(await offering.fundingCapReached(), true);
   });
-    
+*/
   it("should not allow non-owners to call ownerSafeWithdraw", async function() {
     await token.setTokenOffering(offering.address, 0);
     await util.expectThrow(offering.allocateTokens(user3, util.oneEther, util.twoEther, {from:user2}));
@@ -111,7 +111,9 @@ contract('BeeTokenOffering constructor', function(accounts) {
 
   });
 */
+
   it("should allow transfers to unregistered users", async function(){
     await offering.allocateTokens(user4, util.oneEther, util.oneEther, {from:owner});
   });
+  
 });
