@@ -14,9 +14,6 @@ contract BeeTokenOffering is Pausable {
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
-    uint public tokensForSale;
-    bool public fundingCapReached = false;
-    bool public saleClosed = false;
 
     // Address where funds are collected
     address public beneficiary;
@@ -270,19 +267,15 @@ contract BeeTokenOffering is Pausable {
             require(contributions[participant] + weiAmount < 30000 * 1 ether);
         }
         contributions[participant] = contributions[participant].add(weiAmount);
-        weiRaised = weiRaised.add(weiAmount);
+        allocateTokens(participant, weiAmount, tokens);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
-        updateFundingCap();
     }
 
     function updateFundingCap() internal {
-        assert(weiRaised <= FUNDING_ETH_HARD_CAP);
         if (weiRaised >= FUNDING_ETH_HARD_CAP) {
             // Check if the funding cap has been reached
-            fundingCapReached = true;
-            saleClosed = true;
+            endTime = now;
             stage = Stages.OfferingEnded;
-
         }
     }
 
@@ -290,7 +283,7 @@ contract BeeTokenOffering is Pausable {
     function validPurchase() internal view returns (bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        bool withinFunding = weiRaised <= FUNDING_ETH_HARD_CAP;  
+        bool withinFunding = weiRaised + msg.value <= FUNDING_ETH_HARD_CAP;  
         return withinPeriod && nonZeroPurchase && withinFunding;
     }
 

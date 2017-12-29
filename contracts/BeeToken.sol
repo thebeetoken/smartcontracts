@@ -13,7 +13,7 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
     uint8 public constant decimals = 18;
     uint256 public constant INITIAL_SUPPLY = 500000000 * 1 ether;
     uint256 public constant TOKEN_OFFERING_ALLOWANCE = 150000000 * 1 ether; // Currently 30%
-    uint256 public constant ADMIN_ALLOWANCE = 450000000 * 1 ether; // 70%
+    uint256 public constant ADMIN_ALLOWANCE = 350000000 * 1 ether; // 70%
     
     
     uint256 public adminAllowance;          // Number of tokens
