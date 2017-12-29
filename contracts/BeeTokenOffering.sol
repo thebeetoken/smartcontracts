@@ -8,9 +8,8 @@ contract BeeTokenOffering is Pausable {
     using SafeMath for uint256;
     using SafeMath for uint;
 
-    uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
-    bool private reentryLock = false;
-
+    //uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
+    //bool private reentryLock = false;
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
@@ -23,7 +22,6 @@ contract BeeTokenOffering is Pausable {
     address public beneficiary;
 
     // Token to be sold
-    //address public constant token = tokenContract();
     BeeToken public token;
 
     // Tokens per ether
@@ -35,8 +33,6 @@ contract BeeTokenOffering is Pausable {
 
     // Amount of raised in wei (10**18)
     uint256 public weiRaised;
-    // Amount in wei claimed by beneficiary
-    uint256 public fundsClaimed;
 
     // Replace with real start and end times based off of strategy document
     uint256 public doubleTime;
@@ -48,8 +44,8 @@ contract BeeTokenOffering is Pausable {
     uint public cAmount;
     uint public dAmount;
 
-    // Funding cap in ETH. Change to equal $15M at time of token offering
-    uint public constant FUNDING_ETH_HARD_CAP = 37500 * 1 ether;
+    // Funding cap in ETH. Change to equal $5M at time of token offering
+    uint public constant FUNDING_ETH_HARD_CAP = 8000 * 1 ether;
     // Reserve fund subject to change
 
     Stages public stage;
@@ -101,7 +97,7 @@ contract BeeTokenOffering is Pausable {
         require(whitelistD[msg.sender]);
         _;
     }
-    
+    /*
     // Recursive call protection 
     modifier nonReentrant() {
         require(!reentryLock);
@@ -109,6 +105,7 @@ contract BeeTokenOffering is Pausable {
         _;
         reentryLock = false;
     }
+    */
 
     mapping(address => bool) public whitelistA;
     mapping(address => bool) public whitelistB;
@@ -223,10 +220,8 @@ contract BeeTokenOffering is Pausable {
     function allocateTokens(address _to, uint amountWei, uint amountAttoBee)
         public
         onlyOwner
-        nonReentrant
     {
         weiRaised = weiRaised.add(amountWei);
-        require(weiRaised <= FUNDING_ETH_HARD_CAP);
 
         contributions[_to] = contributions[_to].add(amountWei);
 
@@ -247,7 +242,11 @@ contract BeeTokenOffering is Pausable {
             allocateTokens(_to[i], amountWei[i], amountAttoBee[i]);
         }
     }
-
+    
+    function currentTime() public view returns (uint _time) {
+        return now;
+    }
+    
     // Return true if ico event has ended
     function hasEnded() public view returns (bool) {
         return now > endTime;
@@ -264,23 +263,26 @@ contract BeeTokenOffering is Pausable {
         uint256 tokens = weiAmount.mul(rate);
 
         if (now < doubleTime) {
-            require(contributions[participant] < amount);
+            require(contributions[participant] + weiAmount < amount);
         } else if (now < uncappedTime) {
-            require(contributions[participant] < amount*2);
+            require(contributions[participant] + weiAmount < amount*2);
         } else {
-            require(contributions[participant] < 30000 * 1 ether);
+            require(contributions[participant] + weiAmount < 30000 * 1 ether);
         }
         contributions[participant] = contributions[participant].add(weiAmount);
         weiRaised = weiRaised.add(weiAmount);
         TokenPurchase(msg.sender, participant, weiAmount, tokens);
+        updateFundingCap();
     }
 
     function updateFundingCap() internal {
         assert(weiRaised <= FUNDING_ETH_HARD_CAP);
-        if (weiRaised == FUNDING_ETH_HARD_CAP) {
+        if (weiRaised >= FUNDING_ETH_HARD_CAP) {
             // Check if the funding cap has been reached
             fundingCapReached = true;
             saleClosed = true;
+            stage = Stages.OfferingEnded;
+
         }
     }
 

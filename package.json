@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ethereumjs-abi": "^0.6.5",
     "truffle": "^4.0.4",
     "zeppelin-solidity": "^1.5.0"
   },
