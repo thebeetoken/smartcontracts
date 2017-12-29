@@ -1,0 +1,20 @@
+{
+  "name": "bee-contracts",
+  "version": "0.0.1",
+  "description": "Smart Contracts V2 for Bee Token",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "zeppelin-solidity": "^1.5.0"
+  },
+  "devDependencies": {
+    "big-integer": "^1.6.26"
+  }
+}

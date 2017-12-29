@@ -1,3 +1,22 @@
+# Smart Contracts for Bee
+
+## Install
+`npm install`
+
+## Test
+- Run all tests
+
+    `npm test` or `./node_modules/.bin/truffle test`
+
+- Run single tests
+
+    `./node_modules/./bin/truffle test test/BeeToken.test.js`
+
+## Deploy
+
+TBD
+
+## Contracts
 `BeeToken.sol` is ERC20-compatible and has the following characteristics:
 
 1. A fixed supply of pre-minted tokens
