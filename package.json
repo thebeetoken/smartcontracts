@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "truffle": "^4.0.4",
+    "ethereumjs-abi": "^0.6.5",
     "zeppelin-solidity": "^1.5.0"
   },
   "devDependencies": {
