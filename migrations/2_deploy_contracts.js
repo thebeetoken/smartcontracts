@@ -9,7 +9,7 @@ var Ownable = artifacts.require("./ownership/Ownable.sol");
 var Pausable = artifacts.require("./lifecycle/Pausable.sol");
 var BeeToken = artifacts.require("./BeeToken.sol");
 var BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
-
+var BeePayments = artifacts.require("./BeePayments.sol");
 
 module.exports = function(deployer, network, accounts) {
     console.log("Accounts: " + accounts);
@@ -34,10 +34,11 @@ module.exports = function(deployer, network, accounts) {
 
     var time = new Date().getTime() / 1000;
 
-    var monkey = 1234;
-
     deployer.deploy(BeeToken, accounts[1]).then(function() {
         return deployer.deploy(BeeTokenOffering, 2000, accounts[1], 20000, BeeToken.address);
     });
-
+    
+    deployer.deploy(BeeToken, accounts[1]).then(function() {
+        return deployer.deploy(BeePayments, accounts[0]);
+    });
 };

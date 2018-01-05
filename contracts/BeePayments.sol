@@ -4,6 +4,7 @@ import '../node_modules/zeppelin-solidity/contracts/token/ERC20.sol';
 import '../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol';
 import '../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol';
 
+
 contract BeePayments is Ownable { 
     
     
@@ -65,13 +66,12 @@ contract BeePayments is Ownable {
         _;
     }
     
-    
     // maps the paymentIds to the struct
     mapping (bytes32 => PaymentStruct) public allPayments;
     // newly initialized payments: paymentIds => amount of tokens expected
     mapping (bytes32 => uint) public initializedPayments;
     // payments in flight: day in sec => list of payment ids (hashes)
-    mapping (uint => bytes32[]) public inProgressPayments;  // 
+    mapping (uint => bytes32[]) public inProgressPayments;
     // paymentes in arbitration: paymentIds => amount of tokens expected
     mapping (bytes32 => uint) public inArbitrationPayments;
     // completed payments: paymentIds => amount of tokens expected
@@ -177,15 +177,34 @@ contract BeePayments is Ownable {
         return true;
     }
     
+    function dispatchPayment(bytes32 paymentId) public onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS) {
+        PaymentStruct storage payment = allPayments[paymentId];
+        ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
+        require(payment.paymentDispatchTimeInS < now);
+        
+        uint supplyPayout = SafeMath.add(payment.supplyCancellationFee, payment.cost);
+        uint demandPayout = SafeMath.add(payment.demandCancellationFee, payment.securityDeposit);
+        
+        if (tokenContract.transfer(payment.supplyEntityAddress, supplyPayout)
+            && tokenContract.transfer(payment.demandEntityAddress, demandPayout)) {
+            payment.paymentStatus = PaymentStatus.COMPLETED;
+        }
+        
+    }
     /**
      * Dispatches in progress payments daily based on paymentDispatchTimeInS.
+     * This will only be the happy path
      */
-    function dispatchPayments() public pure {
+    // Make a function to get the list of inProgress payments mapping. 
+    function dispatchPayments(bytes32[] paymentId) external {
         // TODO: check daily in progress payments, and pay appropirate accounts.
         // TODO: move successful payments from in progress to completed
-        // check gas costs - limit iterating through every IN_PROGRESS payment 
+        // check gas costs - limit iterating through every IN_PROGRESS payment
         
-        revert();
+        for (uint i = 0; i < paymentId.length; i++) {
+            dispatchPayment(paymentId[i]);
+        }
+
     }
     
     /**
@@ -193,8 +212,6 @@ contract BeePayments is Ownable {
      * @return true if cancel is successful, false otherwise
      */ 
     function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool) {
-        // TODO: check cancelation rules and pay as appropirate
-        // TODO: move payment from in progress to cancel
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
         // replace now with oracle time
@@ -303,5 +320,12 @@ contract BeePayments is Ownable {
         returns(bytes32) {
         return 0;
     }
+    */  
+    /*
+    function cancelPaymentHelper(bytes32 paymentId) internal {
+        // cleanup 
+        
+    }
     */
+    
 }
