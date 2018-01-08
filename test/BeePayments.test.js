@@ -1,7 +1,6 @@
 var BeePayments = artifacts.require("./BeePayments.sol");
 var BeeToken = artifacts.require("./BeeToken.sol");
 var util = require("./util.js");
-var bigInt = require("big-integer");
 
     contract('BeePayments Test', function(accounts) {
         // account[0] points to the owner on the testRPC setup
@@ -9,7 +8,7 @@ var bigInt = require("big-integer");
         var user1 = accounts[1];
         var demand = accounts[2];
         var supply = accounts[3];
-        var uuid = "2D711642B726B04401627CA9FBAC32F5C8530FB1903CC4DB02258717921A4881";
+        var uuid = "x";
 
 
         beforeEach(function() {
@@ -22,11 +21,11 @@ var bigInt = require("big-integer");
             });
         });
 
-        async function initPayment (paymentId, user) {
-            var cost = bigInt("5e18");
-            var deposit = bigInt("2e18");
-            var fee = bigInt("1e18");
-            await payments.initPayment(paymentId, token.address, demand, supply, cost, deposit, fee, fee, 300, 1800, {from : user});
+        async function initPayment (paymentId) {
+            var cost = 50;
+            var deposit = 20;
+            var fee = 10;
+            await payments.initPayment(paymentId, token.address, demand, supply, cost, deposit, fee, fee, 300, 1800, {from : owner});
         }
         async function sendTransaction (value, user) {
             await payments.sendTransaction({value : util.toEther(value), from : user});
@@ -41,86 +40,96 @@ var bigInt = require("big-integer");
             let demandBalance = (await token.balanceOf(demand)).toNumber();
             let supplyBalance = (await token.balanceOf(supply)).toNumber();
             assert.equal(demandBalance, 1000);
+            assert.equal(supplyBalance, 1000);
         });
 
         it("should initialize payment", async function() {
-            await initPayment(uuid, owner);
-            assert(payments.allPayments[uuid].exist);
+            await initPayment(uuid);
+            var payStruct = await payments.allPayments(uuid);
+            var exist = payStruct[0];
+            assert.equal(exist, true);
         });
 
-        it("should allow demand and supply entity pay", async function() {
-            await payments.pay(uuid, {from : demand});
-            await payments.pay(uuid, {from : supply});
-
-            assert.equal(payments.allPayments[uuid].paymentStatus, PaymentStatus.IN_PROGRESS);
+        it("should not initialize existing payment", async function() {
+            await util.expectThrow(initPayment(uuid));
         });
-        
+
         it("should revert when sending ether", async function() {
             await util.expectThrow(sendTransaction(1 , user1));
         });
-        
+
         it("should update arbiter address", async function() {
             await payments.updateArbitrationAddress(user1, {from : owner});
         });
-        
-        it("should allow guest or host to pay", async function() {
-            await payments.pay(uuid, {from : demand});
-            await payments.pay(uuid, {from : supply});
-            
-        });
-        
-        it("should revert if not guest or host", async function() {
+
+        it("should not let outside parties pay", async function() {
             await util.expectThrow(payments.pay(uuid, {from : user1}));
         });
-        
+
+        it("should allow demand and supply entities pay", async function() {
+            var payStruct = await payments.allPayments(uuid);
+            console.log(payStruct);
+
+            await token.approve(payments.address, 1000, {from : demand});
+            await token.approve(payments.address, 1000, {from : supply});
+            await payments.pay(uuid, {from : demand});
+            console.log("demand paid")
+            await payments.pay(uuid, {from : supply});
+            var payStruct = await payments.allPayments(uuid);
+            console.log(payStruct);
+            var status = payStruct[1].toString(10);
+            console.log(status);
+
+            assert.equal(status, "2");
+        });
+
+        it("should not allow cancellation from outsiders", async function() {
+            await util.expectThrow(payments.cancelPayment(uuid, {from : owner}));
+        });
+/*
+        it("should allow cancellation from demand", async function() {
+            await payments.cancelPayment(uuid, {from : demand});
+        });
+
+        it("should allow cancellation from supply", async function() {
+            await payments.cancelPayment(uuid, {from : supply});
+        });
+*/
+        it("should not allow outsider to dispute", async function() {
+            await util.expectThrow(payments.disputePayment(uuid, 0, {from : user1}));
+        });
+/*
+        it("should allow guest to raise disputes", async function() {
+            await payments.disputePayment(uuid, 0, {from : demand});
+        });
+
+        it("should allow host to raise disputes", async function() {
+            await payments.disputePayment(uuid, 0, {from : supply});
+        });
+
         it("should not dispatch payment before ready", async function() {
             await util.expectThrow(payments.dispatchPayment(uuid, {from : owner}));
         });
-        
+*/
         // need to adjust time to dispatch
         it("should dispatch a specific payment", async function() {
             await payments.dispatchPayment(uuid, {from : owner});
         });
         
-        it("should not allow cancellation from outsiders", async function() {
-            await util.expectThrow(payments.cancelPayment(uuid, {from : owner}));
-        });
-        
-        it("should allow cancellation from demand", async function() {
-            await payments.cancelPayment(uuid, {from : demand});
-        });
-        
-        it("should allow cancellation from supply", async function() {
-            await payments.cancelPayment(uuid, {from : supply});
-        });
-        
-        it("should not allow outsider to dispute", async function() {
-            await util.expectThrow(payments.disputePayment(uuid, 0, {from : user1}));
-        });
-        
-        it("should allow guest to raise disputes", async function() {
-            await payments.disputePayment(uuid, 0, {from : demand});
-        });
-        
-        it("should allow host to raise disputes", async function() {
-            await payments.disputePayment(uuid, 0, {from : supply});
-        });
+      
         
         
-        
-        
-           
         
 /*        ** need to call approve from the token contract
 Constructor(BeePayments) (checked ~ good)
 Fallback ~ expect revert (checked ~ good)
 Update arbitration address ~ possible vulnerability if owner is hijacked (checked ~ good)
-initPayment ~ same as above (checked ~ truffle bug requires workaround. Anything associated with this initing payment will throw)
-Pay ~ works mostly. Make sure to call web3** (checked ~ requires init)
-dispatchPayment ~ make sure transfer works (unchecked ~ requires init)
-*s ~ check gas costs. Need to call init and pay a lot to have any effect (unchecked ~ requires init)
-cancelPayment ~ need time machine to check cancellation fees. 4 different test (unchecked ~ requires init)
-disputePayment ~ check if funds are sent to arbitration address. Make sure to call web3** (unchecked ~ requires init)
+initPayment ~ same as above (checked ~ good)
+Pay ~ works mostly. Make sure to call web3** (checked ~ good)
+dispatchPayment ~ make sure transfer works (checked ~ time issues )
+*s ~ check gas costs. Need to call init and pay a lot to have any effect (unchecked ~ )
+cancelPayment ~ need time machine to check cancellation fees. 4 different test (unchecked ~ )
+disputePayment ~ check if funds are sent to arbitration address. Make sure to call web3** (unchecked ~ )
 */
 
 

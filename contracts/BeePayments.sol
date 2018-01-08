@@ -110,7 +110,7 @@ contract BeePayments is Ownable {
         uint supplyCancellationFee,
         uint cancelDeadlineInS,
         uint paymentDispatchTimeInS
-    ) public onlyOwner returns(bool)
+    ) public onlyOwner returns(bool success)
     {
         if (allPayments[paymentId].exist) {
             revert();
@@ -143,10 +143,9 @@ contract BeePayments is Ownable {
     function pay(
         bytes32 paymentId
     ) public
-    payable
     onlyPaymentStatus(paymentId, PaymentStatus.INITIALIZED)
     demandOrSupplyEntity(paymentId)
-    returns (bool)
+    returns (bool success)
     {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
@@ -211,7 +210,7 @@ contract BeePayments is Ownable {
      * Cancels that payment in progress. Runs canclation rules as appropriate.
      * @return true if cancel is successful, false otherwise
      */ 
-    function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool) {
+    function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool success) {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
         // replace now with oracle time
@@ -270,7 +269,7 @@ contract BeePayments is Ownable {
     function disputePayment(bytes32 paymentId, uint arbitrationFee_) 
     public
     demandOrSupplyEntity(paymentId)
-    returns(bool)
+    returns(bool success)
     {
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
@@ -300,7 +299,7 @@ contract BeePayments is Ownable {
      * Used to get all info about the payment.
      * @return all info of the payment, including payment id and status.
      */
-     
+    // Will not work until solidity version updates with #3272
     function getPaymentStatus(bytes32 paymentId) public view returns(PaymentStruct) {
         if (allPayments[paymentId].exist) {
             return allPayments[paymentId];
