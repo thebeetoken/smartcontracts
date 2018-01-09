@@ -42,8 +42,7 @@ contract BeePayments is Ownable {
     //event Pay();
     //event CancelPayment();
     //event DisputePayment();
-    event TruffleHelper(bool success);
-    
+
     // TODO: define modifiers
     modifier demandPaid(bytes32 paymentId) {
         _;
@@ -68,7 +67,6 @@ contract BeePayments is Ownable {
     
     // maps the paymentIds to the struct
     mapping (bytes32 => PaymentStruct) public allPayments;
-    // newly initialized payments: paymentIds => amount of tokens expected
     
     function BeePayments(address arbitrationAddress_) public {
         arbitrationAddress = arbitrationAddress_;
@@ -168,7 +166,7 @@ contract BeePayments is Ownable {
     function dispatchPayment(bytes32 paymentId) public onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS) {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
-        require(payment.paymentDispatchTimeInS < now);
+        require(payment.paymentDispatchTimeInS <= now);
         
         uint supplyPayout = SafeMath.add(payment.supplyCancellationFee, payment.cost);
         uint demandPayout = SafeMath.add(payment.demandCancellationFee, payment.securityDeposit);
@@ -296,24 +294,4 @@ contract BeePayments is Ownable {
             revert();
         }
     }
-    
-    // TODO: createPaymentStruct and createPaymentId
-    /*
-    function createPaymentStruct() internal
-        returns(PaymentStruct) {
-        return 0;
-    }
-    
-    function createPaymentId() internal
-        returns(bytes32) {
-        return 0;
-    }
-    */  
-    /*
-    function cancelPaymentHelper(bytes32 paymentId) internal {
-        // cleanup 
-        
-    }
-    */
-    
 }
