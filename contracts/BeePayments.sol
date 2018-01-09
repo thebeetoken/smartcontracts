@@ -10,7 +10,6 @@ contract BeePayments is Ownable {
     
     using SafeMath for uint;
     address public arbitrationAddress;
-    uint public arbitrationFee; // tbd. 
 
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
@@ -43,6 +42,7 @@ contract BeePayments is Ownable {
     //event Pay();
     //event CancelPayment();
     //event DisputePayment();
+    event TruffleHelper(bool success);
     
     // TODO: define modifiers
     modifier demandPaid(bytes32 paymentId) {
@@ -69,17 +69,6 @@ contract BeePayments is Ownable {
     // maps the paymentIds to the struct
     mapping (bytes32 => PaymentStruct) public allPayments;
     // newly initialized payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public initializedPayments;
-    // payments in flight: day in sec => list of payment ids (hashes)
-    mapping (uint => bytes32[]) public inProgressPayments;
-    // paymentes in arbitration: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public inArbitrationPayments;
-    // completed payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public completedPayments;
-    // canceled payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public canceledPayments;
-    // maps token address to mapping of payment balances. Make sure only admin can update token contract list
-    //mapping (address => mapping (address => uint)) public tokenContract;
     
     function BeePayments(address arbitrationAddress_) public {
         arbitrationAddress = arbitrationAddress_;
@@ -188,7 +177,6 @@ contract BeePayments is Ownable {
             && tokenContract.transfer(payment.demandEntityAddress, demandPayout)) {
             payment.paymentStatus = PaymentStatus.COMPLETED;
         }
-        
     }
     /**
      * Dispatches in progress payments daily based on paymentDispatchTimeInS.
@@ -203,7 +191,6 @@ contract BeePayments is Ownable {
         for (uint i = 0; i < paymentId.length; i++) {
             dispatchPayment(paymentId[i]);
         }
-
     }
     
     /**
@@ -264,18 +251,20 @@ contract BeePayments is Ownable {
     }
     /**
      * Moves the in progress payment into arbitration.
+     * Needs web3 approve call
      */ 
     
     function disputePayment(bytes32 paymentId, uint arbitrationFee_) 
     public
     demandOrSupplyEntity(paymentId)
+    onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS)
     returns(bool success)
     {
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
-        arbitrationFee = arbitrationFee_;
+        uint256 arbitrationFee = arbitrationFee_;
         uint256 total = SafeMath.add(
             payment.securityDeposit,
             SafeMath.add(
@@ -286,7 +275,7 @@ contract BeePayments is Ownable {
                 )
             )
         ); 
-            
+        
         if (tokenContract.transferFrom(msg.sender, arbitrationAddress, arbitrationFee)
             && tokenContract.transfer(arbitrationAddress, total)) {
             payment.paymentStatus = PaymentStatus.IN_ARBITRATION;
