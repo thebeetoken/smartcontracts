@@ -4,12 +4,12 @@ import '../node_modules/zeppelin-solidity/contracts/token/ERC20.sol';
 import '../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol';
 import '../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol';
 
+
 contract BeePayments is Ownable { 
     
     
     using SafeMath for uint;
     address public arbitrationAddress;
-    uint public arbitrationFee; // tbd. 
 
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
@@ -42,7 +42,7 @@ contract BeePayments is Ownable {
     //event Pay();
     //event CancelPayment();
     //event DisputePayment();
-    
+
     // TODO: define modifiers
     modifier demandPaid(bytes32 paymentId) {
         _;
@@ -65,21 +65,8 @@ contract BeePayments is Ownable {
         _;
     }
     
-    
     // maps the paymentIds to the struct
     mapping (bytes32 => PaymentStruct) public allPayments;
-    // newly initialized payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public initializedPayments;
-    // payments in flight: day in sec => list of payment ids (hashes)
-    mapping (uint => bytes32[]) public inProgressPayments;  // 
-    // paymentes in arbitration: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public inArbitrationPayments;
-    // completed payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public completedPayments;
-    // canceled payments: paymentIds => amount of tokens expected
-    mapping (bytes32 => uint) public canceledPayments;
-    // maps token address to mapping of payment balances. Make sure only admin can update token contract list
-    //mapping (address => mapping (address => uint)) public tokenContract;
     
     function BeePayments(address arbitrationAddress_) public {
         arbitrationAddress = arbitrationAddress_;
@@ -110,7 +97,7 @@ contract BeePayments is Ownable {
         uint supplyCancellationFee,
         uint cancelDeadlineInS,
         uint paymentDispatchTimeInS
-    ) public onlyOwner returns(bool)
+    ) public onlyOwner returns(bool success)
     {
         if (allPayments[paymentId].exist) {
             revert();
@@ -143,10 +130,9 @@ contract BeePayments is Ownable {
     function pay(
         bytes32 paymentId
     ) public
-    payable
     onlyPaymentStatus(paymentId, PaymentStatus.INITIALIZED)
     demandOrSupplyEntity(paymentId)
-    returns (bool)
+    returns (bool success)
     {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
@@ -177,24 +163,39 @@ contract BeePayments is Ownable {
         return true;
     }
     
+    function dispatchPayment(bytes32 paymentId) public onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS) {
+        PaymentStruct storage payment = allPayments[paymentId];
+        ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
+        require(payment.paymentDispatchTimeInS <= now);
+        
+        uint supplyPayout = SafeMath.add(payment.supplyCancellationFee, payment.cost);
+        uint demandPayout = SafeMath.add(payment.demandCancellationFee, payment.securityDeposit);
+        
+        if (tokenContract.transfer(payment.supplyEntityAddress, supplyPayout)
+            && tokenContract.transfer(payment.demandEntityAddress, demandPayout)) {
+            payment.paymentStatus = PaymentStatus.COMPLETED;
+        }
+    }
     /**
      * Dispatches in progress payments daily based on paymentDispatchTimeInS.
+     * This will only be the happy path
      */
-    function dispatchPayments() public pure {
+    // Make a function to get the list of inProgress payments mapping. 
+    function dispatchPayments(bytes32[] paymentId) external {
         // TODO: check daily in progress payments, and pay appropirate accounts.
         // TODO: move successful payments from in progress to completed
-        // check gas costs - limit iterating through every IN_PROGRESS payment 
+        // check gas costs - limit iterating through every IN_PROGRESS payment
         
-        revert();
+        for (uint i = 0; i < paymentId.length; i++) {
+            dispatchPayment(paymentId[i]);
+        }
     }
     
     /**
      * Cancels that payment in progress. Runs canclation rules as appropriate.
      * @return true if cancel is successful, false otherwise
      */ 
-    function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool) {
-        // TODO: check cancelation rules and pay as appropirate
-        // TODO: move payment from in progress to cancel
+    function cancelPayment(bytes32 paymentId) public demandOrSupplyEntity(paymentId) returns(bool success) {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
         // replace now with oracle time
@@ -248,18 +249,20 @@ contract BeePayments is Ownable {
     }
     /**
      * Moves the in progress payment into arbitration.
+     * Needs web3 approve call
      */ 
     
     function disputePayment(bytes32 paymentId, uint arbitrationFee_) 
     public
     demandOrSupplyEntity(paymentId)
-    returns(bool)
+    onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS)
+    returns(bool success)
     {
         // TODO: pass escrow to Bee Arbitration protocol
         // TODO: move from in progress to arbitration
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
-        arbitrationFee = arbitrationFee_;
+        uint256 arbitrationFee = arbitrationFee_;
         uint256 total = SafeMath.add(
             payment.securityDeposit,
             SafeMath.add(
@@ -270,7 +273,7 @@ contract BeePayments is Ownable {
                 )
             )
         ); 
-            
+        
         if (tokenContract.transferFrom(msg.sender, arbitrationAddress, arbitrationFee)
             && tokenContract.transfer(arbitrationAddress, total)) {
             payment.paymentStatus = PaymentStatus.IN_ARBITRATION;
@@ -283,7 +286,7 @@ contract BeePayments is Ownable {
      * Used to get all info about the payment.
      * @return all info of the payment, including payment id and status.
      */
-     
+    // Will not work until solidity version updates with #3272
     function getPaymentStatus(bytes32 paymentId) public view returns(PaymentStruct) {
         if (allPayments[paymentId].exist) {
             return allPayments[paymentId];
@@ -291,17 +294,4 @@ contract BeePayments is Ownable {
             revert();
         }
     }
-    
-    // TODO: createPaymentStruct and createPaymentId
-    /*
-    function createPaymentStruct() internal
-        returns(PaymentStruct) {
-        return 0;
-    }
-    
-    function createPaymentId() internal
-        returns(bytes32) {
-        return 0;
-    }
-    */
 }
