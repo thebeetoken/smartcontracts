@@ -3,10 +3,14 @@
 ## Install
 `npm install`
 
-## Test
-- Run all tests
+## Test and Coverage
+- Run all tests without test coverage report
 
-    `npm test` or `./node_modules/.bin/truffle test`
+    `npm run test` or `./node_modules/.bin/truffle test`
+
+- Run all tests and report test coverage
+
+    `npm run coverage`
 
 - Run single test
 
