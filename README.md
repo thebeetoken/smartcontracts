@@ -10,7 +10,11 @@
 
 - Run all tests and report test coverage
 
-    `npm run coverage`
+    `npm run cover`
+
+- After running `npm run cover`, you can view coverage report in HTML by running:
+
+    `npm run view-cover`
 
 - Run single test
 

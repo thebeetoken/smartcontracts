@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "truffle test",
-    "coverage": "solidity-coverage"
+    "cover": "solidity-coverage",
+    "view-cover": "opn ./coverage/index.html"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +20,15 @@
   },
   "devDependencies": {
     "big-integer": "^1.6.26",
+    "opn-cli": "^3.1.0",
     "solidity-coverage": "^0.4.8"
+  },
+  "engines": {
+    "node": "8.4.0",
+    "npm": "5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebeetoken/smartcontracts.git"
   }
 }
