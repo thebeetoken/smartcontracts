@@ -22,12 +22,13 @@ contract('BeeToken (Basic Tests)', function (accounts) {
     // account[0] points to the owner on the testRPC setup
     const owner = accounts[0];
     const user1 = accounts[1];
+    const admin = accounts[3];
 
     let token = null;
     let offering = null;
 
     beforeEach(async function () {
-        token = await BeeToken.new(owner);
+        token = await BeeToken.new(admin, { from: owner });
         offering = await BeeTokenOffering.new(
             1, token.address, 1000, token.address
         );
@@ -49,56 +50,44 @@ contract('BeeToken (Basic Tests)', function (accounts) {
         assert.equal(ownerBalance, new BigNumber("5e26"), "the owner balance should initially be 500 million tokens");
     });
 
-    it("should not allow a regular user to transfer before they are enabled", async function () {
-        await util.assertRevert(token.transfer(user1, 10, { from: user1 }));
-    });
+    it("admin should have 350MM tokens in allowance", async function () {
+        const adminAllowance = await token.allowance(owner, admin);
+        assert.equal(adminAllowance, 3.5e26, "admin allowance should be right");
+    })
 
     it("should allow owner to set token offering", async function () {
-        assert.equal(await token.tokenOfferingAddr(), '0x0000000000000000000000000000000000000000');
+        assert.equal(await token.tokenOfferingAddr(), util.zeroAddress);
         await token.setTokenOffering(offering.address, 100);
         assert.equal(await token.tokenOfferingAddr(), offering.address);
     });
 
     it("should not allow non-owner to set token offering", async function () {
-        assert.equal(await token.tokenOfferingAddr(), '0x0000000000000000000000000000000000000000');
+        assert.equal(await token.tokenOfferingAddr(), util.zeroAddress);
         // user1 is not owner of token
         await util.assertRevert(token.setTokenOffering(offering.address, 100, { from: user1 }));
     });
 
-    it("Once transfer is Enabled, cannot setTokenOffering", async function() {
+    it("Once transfer is Enabled, cannot setTokenOffering", async function () {
         let transferEnabled = await token.transferEnabled();
         assert.isFalse(transferEnabled);
-        await token.enableTransfer({from: owner});
+        await token.enableTransfer({ from: owner });
         transferEnabled = await token.transferEnabled();
         assert.isTrue(transferEnabled);
 
         await util.assertRevert(token.setTokenOffering(offering.address, 100));
     });
 
-    it("Token for sale cannot be greater than allowance", async function() {
+    it("Token for sale cannot be greater than allowance", async function () {
         // offering allowance should be 1.5e26
         await util.assertRevert(token.setTokenOffering(offering.address, 2e26));
     });
-    /*
-    it("should allow the deployer (owner) of the token to make transfers", async function() {
-        await token.transfer(offering.address, 10 ** 26);
-        let ownerBalance = await token.balanceOf(owner);
-        let offeringBalance = await token.balanceOf(offering.address);
-        let initialSupply = await token.INITIAL_SUPPLY();
-        let totalSupply = await token.totalSupply();
-        ownerBalance = ownerBalance.toNumber();
-        offeringBalance = offeringBalance.toNumber();
-        initialSupply = initialSupply.toNumber();
-        totalSupply = totalSupply.toNumber();
-  
-        assert.equal(ownerBalance, bigInt("4e26"), "the owner should now have 80% of the original funds");
-        assert.equal(offeringBalance, bigInt("1e26"), "the token offering should now have 20% of the original funds");
-        assert.equal(totalSupply, initialSupply, "the total supply should equal the initial supply");
-    });
-    */
 
     it("should not allow a regular user to enable transfers", async function () {
         await util.assertRevert(token.enableTransfer({ from: user1 }));
+    });
+
+    it("should not allow a regular user to transfer before they are enabled", async function () {
+        await util.assertRevert(token.transfer(user1, 10, { from: user1 }));
     });
 
     it("should enable transfers after invoking enableTransfer as owner", async function () {
@@ -109,6 +98,102 @@ contract('BeeToken (Basic Tests)', function (accounts) {
         assert.isTrue(isEnabledAfter, "transfers should be enabled");
     });
 
+});
+
+contract('BeeToken (transfers)', function (accounts) {
+    const owner = accounts[0];
+    const user1 = accounts[1];
+    const user2 = accounts[2];
+    const admin = accounts[3];
+    const offeringAddress = accounts[4];
+
+    let token = null;
+
+    beforeEach(async function () {
+        token = await BeeToken.new(admin, { from: owner });
+    });
+
+    it('Admin can transfers tokens before transfers are enabled, admin allowance should get updated properly', async function() {
+        let adminAllowance = await token.allowance(owner, admin);
+        assert.equal(adminAllowance, 3.5e26, 'original admin allowance');
+        
+        await token.transferFrom(owner, user1, 1000, { from: admin });
+        
+        adminAllowance = await token.allowance(owner, admin);
+        assert.equal(adminAllowance, 3.5e26 - 1000, 'new admin allowance');
+
+        const balance = await token.balanceOf(user1);
+        assert.equal(balance, 1000);
+    });
+
+    it('Offering contract can transfers tokens before transfers are enabled, offering allowance should get updated properly', async function () {
+        let offeringAllowance = await token.allowance(owner, offeringAddress);
+        assert.equal(offeringAllowance, 0, 'original offering allowance');
+        
+        await token.setTokenOffering(offeringAddress, 1000);
+        
+        offeringAllowance = await token.allowance(owner, offeringAddress);
+        assert.equal(offeringAllowance, 1000, 'new offering allowance');
+        const offeringAddr = await token.tokenOfferingAddr();
+        assert.equal(offeringAddr, offeringAddress);
+        let totalOfferingAllowance = await token.tokenOfferingAllowance();
+        assert.equal(totalOfferingAllowance, 1.5e+26, 'total offering allowance');
+
+
+        let userBalance = await token.balanceOf(user1);
+        assert.equal(userBalance, 0, 'original user balance');
+        await token.transferFrom(owner, user1, 900, {from: offeringAddress});
+        userBalance = await token.balanceOf(user1);
+        assert.equal(userBalance, 900, 'new user balance');
+
+        totalOfferingAllowance = await token.tokenOfferingAllowance();
+        assert.equal(totalOfferingAllowance, 1.5e+26 - 999, 'new total offering allowance');
+    });
+
+    it('Transfer to invalid destination address', async function () {
+        await token.transferFrom(owner, user1, 1000, { from: admin });
+        
+        await token.setTokenOffering(offeringAddress, 1000);
+        
+        await token.enableTransfer();
+        const transferEnabled = await token.transferEnabled();
+        assert.isTrue(transferEnabled);
+
+        // fails: zero address
+        await util.assertRevert(token.transfer(util.zeroAddress, 1000, { from: user1 }));
+        // fails: to token contract
+        await util.assertRevert(token.transfer(token.address, 1000, { from: user1 }));
+        // fails: to owner
+        await util.assertRevert(token.transfer(owner, 1000, { from: user1 }));
+        // fails: to admin
+        await util.assertRevert(token.transfer(admin, 1000, { from: user1 }));
+        // fails: to offering address
+        await util.assertRevert(token.transfer(offeringAddress, 1000, { from: user1 }));
+    });
+
+    it('A regular user calls transferFrom', async function () {
+        const amount = 1000;
+        await token.approve(user1, amount, { from: owner });
+        const allowance = await token.allowance(owner, user1);
+        assert.equal(allowance, amount, 'allowance should be updated');
+
+        // enable transfer
+        await token.enableTransfer();
+        transferEnabled = await token.transferEnabled();
+        assert.isTrue(transferEnabled, 'transfer enabled');
+
+        // user2 is not the spender, expect this call to fail
+        await util.assertRevert(token.transferFrom(owner, user2, 1000, { from: user2 }));
+
+        // user1 transfer more than allowed
+        await util.assertRevert(token.transferFrom(owner, user2, 1001, { from: user1 }));
+
+        let user2Balance = await token.balanceOf(user2);
+        assert.equal(user2Balance, 0, 'user2 balance 0');
+        await token.transferFrom(owner, user2, 1000, { from: user1 });
+        user2Balance = await token.balanceOf(user2);
+        assert.equal(user2Balance, 1000, 'transfer to user2 succeeded');
+    });
 });
 
 contract('BeeToken (token burning tests)', function (accounts) {

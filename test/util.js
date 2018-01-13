@@ -76,5 +76,6 @@ module.exports = {
     tenEther : toEther(10),
     hundredEther : toEther(100),
 
-    GAS_LIMIT_IN_WEI: 50000000000
+    GAS_LIMIT_IN_WEI: 50000000000,
+    zeroAddress: '0x0000000000000000000000000000000000000000',
 }
