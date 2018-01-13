@@ -1,25 +1,8 @@
-var expectThrow = async function(promise) {
-  try {
-    await promise;
-  } catch (error) {
-    const invalidOpcode = error.message.search('invalid opcode') >= 0;
-    const invalidJump = error.message.search('invalid JUMP') >= 0;
-    const outOfGas = error.message.search('out of gas') >= 0;
-    assert(
-      invalidOpcode || invalidJump || outOfGas,
-      "Expected throw, got '" + error + "' instead",
-    );
-    return;
-  }
-  assert.fail('Expected throw not received');
-};
-
 function toEther (n) {
     return web3.toWei(n, "ether");
 }
 
 module.exports = {
-
     expectThrow : async function(promise) {
         try {
             await
@@ -38,6 +21,16 @@ module.exports = {
         assert.fail('Expected throw not received');
     },
 
+    assertRevert: async promise => {
+        try {
+            await promise;
+            assert.fail('Expected revert not received');
+        } catch (error) {
+            const revetFound = error.message.search('revert') >= 0;
+            assert(revetFound, `Expected "revert", got ${error} instead`);
+        }
+    },
+    
     logUserBalances : async function logUserBalances (token, accounts) {
         console.log("");
         console.log("User Balances:");
