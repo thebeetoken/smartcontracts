@@ -22,7 +22,28 @@
 
 ## Deploy
 
-TBD
+- Start Geth locally and wait for it to sync:
+
+    `geth --rpc --rinkeby --rpccorsdomain="*" --rpcapi="db,eth,net,web3,personal" --fast --cache=1024`
+
+    This starts geth in rinkeby network, you can change it to use other networks.
+
+- Check status of the sync:
+
+    `./node_modules/./bin/truffle console`
+    
+    `(truffle)> web3.eth.syncing`
+
+- Unlock your account from truffle console
+
+    `./node_modules/./bin/truffle console`
+
+    `(truffle)> web3.personal.unlockAccount(web3.eth.accounts[0], YOUR_PASSWORD)`
+
+- Run truffle migration (make sure geth it updated and the account has enough ether for gas)
+
+    `./node_modules/./bin/truffle migrate --network localtest`
+
 
 ## Contracts
 `BeeToken.sol` is ERC20-compatible and has the following characteristics:
