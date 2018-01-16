@@ -31,6 +31,7 @@
 - Check status of the sync:
 
     `./node_modules/./bin/truffle console`
+    
     `(truffle)> web3.eth.syncing`
 
 - Unlock your account from truffle console
