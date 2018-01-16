@@ -152,7 +152,7 @@ contract('Whitelist Crowdsale', function(accounts) {
 
         assert.equal(saleBalance4, util.fourEther, "User4 sale balance is wrong");
         assert.equal(saleBalance5, util.fourEther, "User5 sale balance is wrong");
-        assert.equal(saleBalance6, util.sixEther, "User6 sale balance is wrong");
+        assert.equal(saleBalance6, util.eightEther, "User6 sale balance is wrong");
 
 
     });
