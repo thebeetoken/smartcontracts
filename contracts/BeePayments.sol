@@ -39,9 +39,9 @@ contract BeePayments is Ownable {
     }
     
     // TODO: define events
-    //event Pay();
-    //event CancelPayment();
-    //event DisputePayment();
+    //event Pay(address user, bool paid, uint amount);
+    //event CancelPayment(uint time, uint amount);
+    //event DisputePayment(uint time, uint amount);
 
     // TODO: define modifiers
     modifier demandPaid(bytes32 paymentId) {
@@ -137,7 +137,7 @@ contract BeePayments is Ownable {
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
         if (msg.sender == payment.demandEntityAddress) {
-            uint256 amountToPay = SafeMath.add(
+            uint amountToPay = SafeMath.add(
                 payment.securityDeposit,
                 SafeMath.add(
                     payment.demandCancellationFee,
@@ -262,8 +262,8 @@ contract BeePayments is Ownable {
         // TODO: move from in progress to arbitration
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
-        uint256 arbitrationFee = arbitrationFee_;
-        uint256 total = SafeMath.add(
+        uint arbitrationFee = arbitrationFee_;
+        uint total = SafeMath.add(
             payment.securityDeposit,
             SafeMath.add(
                 payment.demandCancellationFee,
