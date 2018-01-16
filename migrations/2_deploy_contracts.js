@@ -17,7 +17,7 @@ module.exports = function (deployer, network, accounts) {
     ).then(() => {
         return BeeToken.deployed().then(instance => {
             beeToken = instance;
-            console.log(`BeeToken deployed at ${beeToken.address}`)
+            console.log(`BeeToken deployed at \x1b[36m${instance.address}\x1b[0m`)
         });
     }).then(() => {
         const rate = 5000;
@@ -29,7 +29,7 @@ module.exports = function (deployer, network, accounts) {
         ).then(() => {
             return BeeTokenOffering.deployed().then(instance => {
                 beeOffering = instance;
-                console.log(`BeeTokenOffering deployed at ${beeOffering.address}`)
+                console.log(`BeeTokenOffering deployed at \x1b[36m${instance.address}\x1b[0m`)
             });
         })
     }).then(() => {
@@ -39,7 +39,7 @@ module.exports = function (deployer, network, accounts) {
         ).then(() => {
             return BeePayments.deployed().then(instance => {
                 beePayments = instance;
-                console.log(`BeePayments deployed at ${beePayments.address}`)
+                console.log(`BeePayments deployed at \x1b[36m${instance.address}\x1b[0m`)
             })
         })
     });
