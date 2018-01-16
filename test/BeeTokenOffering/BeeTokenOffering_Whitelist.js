@@ -47,7 +47,7 @@ contract('Whitelist Crowdsale', function(accounts) {
 
     });
 
-    it("should allow multiple users to be added to the whitelist", async function() {
+    it("should allow multiple users to be added to the whitelistA", async function() {
         var addresses = [user4, user5, user6];
 
         await sale.whitelistTierA(addresses, {from:owner});
@@ -77,7 +77,7 @@ contract('Whitelist Crowdsale', function(accounts) {
 
     });
 
-    it("should allow multiple users to be added to the whitelist", async function() {
+    it("should allow multiple users to be added to the whitelistB", async function() {
         var addresses = [user4, user5, user6];
 
         await sale.whitelistTierB(addresses, {from:owner});
@@ -107,7 +107,7 @@ contract('Whitelist Crowdsale', function(accounts) {
 
     });
 
-    it("should allow multiple users to be added to the whitelist", async function() {
+    it("should allow multiple users to be added to the whitelistC", async function() {
         var addresses = [user4, user5, user6];
 
         await sale.whitelistTierC(addresses, {from:owner});
@@ -137,7 +137,7 @@ contract('Whitelist Crowdsale', function(accounts) {
 
     });
 
-    it("should allow multiple users to be added to the whitelist", async function() {
+    it("should allow multiple users to be added to the whitelistD", async function() {
         var addresses = [user4, user5, user6];
 
         await sale.whitelistTierD(addresses, {from:owner});

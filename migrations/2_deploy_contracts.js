@@ -1,28 +1,45 @@
-var BeeToken = artifacts.require("./BeeToken.sol");
-var BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
-var BeePayments = artifacts.require("./BeePayments.sol");
+const BeeToken = artifacts.require("./BeeToken.sol");
+const BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
+const BeePayments = artifacts.require("./BeePayments.sol");
 
-module.exports = function(deployer, network, accounts) {
+module.exports = function (deployer, network, accounts) {
     console.log(`Accounts: ${accounts}`);
 
-    var beeToken = null;
-    var beeOffering = null;
-    var beePayments = null;
+    let beeToken = null;
+    let beeOffering = null;
+    let beePayments = null;
 
-    return deployer.deploy(BeeToken, {from: accounts[1]}).then(() => {
+    const owner = accounts[0];
+    const admin = accounts[1];
+
+    return deployer.deploy(
+        BeeToken, admin, { from: owner }
+    ).then(() => {
         return BeeToken.deployed().then(instance => {
             beeToken = instance;
+            console.log(`BeeToken deployed at \x1b[36m${instance.address}\x1b[0m`)
         });
     }).then(() => {
-        return deployer.deploy(BeeTokenOffering, 2000, accounts[1], 20000, beeToken.address, {from: accounts[1]}).then(() => {
+        const rate = 5000;
+        const beneficiary = accounts[1];
+        const baseCap = 10;
+
+        return deployer.deploy(
+            BeeTokenOffering, rate, beneficiary, baseCap, beeToken.address, { from: owner }
+        ).then(() => {
             return BeeTokenOffering.deployed().then(instance => {
                 beeOffering = instance;
+                console.log(`BeeTokenOffering deployed at \x1b[36m${instance.address}\x1b[0m`)
             });
         })
     }).then(() => {
-        return deployer.deploy(BeePayments, accounts[0], {from: accounts[0]}).then(() => {
+        const arbitrationAddress = accounts[1];
+        return deployer.deploy(
+            BeePayments, arbitrationAddress, { from: owner }
+        ).then(() => {
             return BeePayments.deployed().then(instance => {
                 beePayments = instance;
+                console.log(`BeePayments deployed at \x1b[36m${instance.address}\x1b[0m`)
             })
         })
     });
