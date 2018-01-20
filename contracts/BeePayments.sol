@@ -10,6 +10,7 @@ contract BeePayments is Ownable {
     
     using SafeMath for uint;
     address public arbitrationAddress;
+    uint public arbitrationFee;
 
     enum PaymentStatus {
         NOT_FOUND,      // payment does not exist
@@ -32,8 +33,8 @@ contract BeePayments is Ownable {
         uint securityDeposit;
         uint demandCancellationFee;
         uint supplyCancellationFee;
-        uint cancelDeadlineInS;
-        uint paymentDispatchTimeInS;
+        uint64 cancelDeadlineInS;
+        uint64 paymentDispatchTimeInS;
         bool demandPaid;
         bool supplyPaid;
     }
@@ -67,9 +68,10 @@ contract BeePayments is Ownable {
     
     // maps the paymentIds to the struct
     mapping (bytes32 => PaymentStruct) public allPayments;
-    
-    function BeePayments(address arbitrationAddress_) public {
+
+    function BeePayments(address arbitrationAddress_, uint arbitrationFee_) public {
         arbitrationAddress = arbitrationAddress_;
+        arbitrationFee = arbitrationFee_;
     }
 
     function () public payable {
@@ -78,6 +80,10 @@ contract BeePayments is Ownable {
     
     function updateArbitrationAddress(address arbitrationAddress_) public onlyOwner {
         arbitrationAddress = arbitrationAddress_;
+    }
+
+    function updateArbitrationFee(uint arbitrationFee_) public onlyOwner {
+        arbitrationFee = arbitrationFee_;
     }
     
     /**
@@ -95,8 +101,8 @@ contract BeePayments is Ownable {
         uint securityDeposit,
         uint demandCancellationFee,
         uint supplyCancellationFee,
-        uint cancelDeadlineInS,
-        uint paymentDispatchTimeInS
+        uint64 cancelDeadlineInS,
+        uint64 paymentDispatchTimeInS
     ) public onlyOwner returns(bool success)
     {
         if (allPayments[paymentId].exist) {
@@ -250,9 +256,9 @@ contract BeePayments is Ownable {
     /**
      * Moves the in progress payment into arbitration.
      * Needs web3 approve call
-     */ 
-    
-    function disputePayment(bytes32 paymentId, uint arbitrationFee_) 
+     */
+
+    function disputePayment(bytes32 paymentId) 
     public
     demandOrSupplyEntity(paymentId)
     onlyPaymentStatus(paymentId, PaymentStatus.IN_PROGRESS)
@@ -262,7 +268,6 @@ contract BeePayments is Ownable {
         // TODO: move from in progress to arbitration
         PaymentStruct storage payment = allPayments[paymentId];
         ERC20 tokenContract = ERC20(payment.paymentTokenContractAddress);
-        uint arbitrationFee = arbitrationFee_;
         uint total = SafeMath.add(
             payment.securityDeposit,
             SafeMath.add(
@@ -272,21 +277,22 @@ contract BeePayments is Ownable {
                     payment.supplyCancellationFee
                 )
             )
-        ); 
-        
+        );
+
         if (tokenContract.transferFrom(msg.sender, arbitrationAddress, arbitrationFee)
             && tokenContract.transfer(arbitrationAddress, total)) {
             payment.paymentStatus = PaymentStatus.IN_ARBITRATION;
         } else {
             return false;
         }
-        return true;  
+        return true;
     }
     /**
      * Used to get all info about the payment.
      * @return all info of the payment, including payment id and status.
      */
     // Will not work until solidity version updates with #3272
+    /*
     function getPaymentStatus(bytes32 paymentId) public view returns(PaymentStruct) {
         if (allPayments[paymentId].exist) {
             return allPayments[paymentId];
@@ -294,4 +300,5 @@ contract BeePayments is Ownable {
             revert();
         }
     }
+    */
 }

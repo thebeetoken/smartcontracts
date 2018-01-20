@@ -6,10 +6,6 @@ contract BeeTokenOffering is Pausable {
 
 
     using SafeMath for uint256;
-    using SafeMath for uint;
-
-    //uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei;
-    //bool private reentryLock = false;
 
     // Start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
@@ -25,24 +21,18 @@ contract BeeTokenOffering is Pausable {
     // 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
     uint256 public rate;
 
-    // base cap for contributions in Eth
-    uint256 public baseCap;
-
     // Amount of raised in wei (10**18)
     uint256 public weiRaised;
 
     // Replace with real start and end times based off of strategy document
-    uint256 public doubleTime;
-    uint256 public uncappedTime;
+    uint256 public capDoublingTimestamp;
+    uint256 public capReleaseTimestamp;
 
     // Contribution limits in Eth per tier
-    uint public aAmount;
-    uint public bAmount;
-    uint public cAmount;
-    uint public dAmount;
+    uint256[2] public tierCaps;
 
     // Funding cap in ETH. Change to equal $5M at time of token offering
-    uint public constant FUNDING_ETH_HARD_CAP = 8000 * 1 ether;
+    uint public constant FUNDING_ETH_HARD_CAP = 5000 * 1 ether;
     // Reserve fund subject to change
 
     Stages public stage;
@@ -50,64 +40,30 @@ contract BeeTokenOffering is Pausable {
     enum Stages { 
         Setup,
         OfferingStarted,
-        OfferingEnded,
-        Distributed
+        OfferingEnded
     }
 
     // Event for token purchase logging
     // Purchaser - who paid for the tokens
-    // Beneficiary - reviever of ether
     // Value - weis paid for purchase
     // Amount - amount of tokens purchased
     event TokenPurchase(
         address indexed purchaser, 
-        address indexed _beneficiary, 
         uint256 value, uint256 amount
     );
-
-    modifier onlyOwner {
-        require(msg.sender == owner);
-        _;
-    }
 
     modifier atStage(Stages _stage) {
         require(stage == _stage);
         _;
     }
 
-    modifier aLister {
-        require(whitelistA[msg.sender]);
+    // add msg.sender logic to whitelist user
+    modifier belongsToList(uint8 idx) {
+        require(whitelists[idx][msg.sender]);
         _;
     }
 
-    modifier bLister {
-        require(whitelistB[msg.sender]);
-        _;
-    }
-
-    modifier cLister {
-        require(whitelistC[msg.sender]);
-        _;
-    }
-
-    modifier dLister {
-        require(whitelistD[msg.sender]);
-        _;
-    }
-    /*
-    // Recursive call protection 
-    modifier nonReentrant() {
-        require(!reentryLock);
-        reentryLock = true;
-        _;
-        reentryLock = false;
-    }
-    */
-
-    mapping(address => bool) public whitelistA;
-    mapping(address => bool) public whitelistB;
-    mapping(address => bool) public whitelistC;
-    mapping(address => bool) public whitelistD;
+    mapping(uint8 => mapping(address => bool)) public whitelists;
     mapping(address => uint) public contributions;
 
     function BeeTokenOffering(
@@ -122,11 +78,9 @@ contract BeeTokenOffering is Pausable {
         require(tokenAddress != address(0));
         token = BeeToken(tokenAddress);
 
-        baseCap = _baseCap * (10 ** 17); // convert from Eth to Decawei
-        aAmount = baseCap * 30; // Contribution cap per tier in wei
-        bAmount = baseCap * 20;
-        cAmount = baseCap * 15;
-        dAmount = baseCap * 10;
+        tierCaps[0] = _baseCap.mul(2); // Contribution cap per tier in ether
+        tierCaps[1] = _baseCap;
+
         rate = _rate; // BEE to Ether
         beneficiary = _beneficiary;
         stage = Stages.Setup;
@@ -144,36 +98,18 @@ contract BeeTokenOffering is Pausable {
     }
 
     // Assign new user tiers
-    function whitelistTierA (address[] users) public onlyOwner {
+    function whitelist(uint8 idx, address[] users) public onlyOwner {
         for (uint32 i = 0; i < users.length; i++) {
-            whitelistA[users[i]] = true;
+            whitelists[idx][users[i]] = true;
         }
     }
 
-    function whitelistTierB (address[] users) public onlyOwner {
-        for (uint32 i = 0; i < users.length; i++) {
-            whitelistB[users[i]] = true;
-        }
-    }
-
-    function whitelistTierC (address[] users) public onlyOwner {
-        for (uint32 i = 0; i < users.length; i++) {
-            whitelistC[users[i]] = true;
-        }
-    }
-
-    function whitelistTierD (address[] users) public onlyOwner {
-        for (uint32 i = 0; i < users.length; i++) {
-            whitelistD[users[i]] = true;
-        }
-    }        
-
-    function startOffering(uint durationInSeconds) public onlyOwner atStage(Stages.Setup) {
+    function startOffering(uint256 durationInSeconds) public onlyOwner atStage(Stages.Setup) {
         stage = Stages.OfferingStarted;
         startTime = now;
-        doubleTime = startTime + 48 hours;
-        uncappedTime = startTime + 96 hours;
-        endTime = startTime + durationInSeconds;
+        capDoublingTimestamp = startTime + 24 hours;
+        capReleaseTimestamp = startTime + 48 hours;
+        endTime = startTime.add(durationInSeconds);
         // Add event for convenience
     }
 
@@ -184,37 +120,28 @@ contract BeeTokenOffering is Pausable {
         // Add event for convenience
     }
     
-    function buyTokensAList() public payable whenNotPaused aLister atStage(Stages.OfferingStarted) {
-        buyTokensList(aAmount);
-    }
-    
-    function buyTokensBList() public payable whenNotPaused bLister atStage(Stages.OfferingStarted) {
-        buyTokensList(bAmount);
-    }
-            
-    function buyTokensCList() public payable whenNotPaused cLister atStage(Stages.OfferingStarted) {
-        buyTokensList(cAmount);
+    function buyTokensTier0() public payable whenNotPaused belongsToList(0) atStage(Stages.OfferingStarted){
+        buyTokensTier(tierCaps[0]);
     }
 
-    function buyTokensDList() public payable whenNotPaused dLister atStage(Stages.OfferingStarted) {
-        buyTokensList(dAmount);
+    function buyTokensTier1() public payable whenNotPaused belongsToList(1) atStage(Stages.OfferingStarted){
+        buyTokensTier(tierCaps[1]);
     }
+
 
     function buy() public payable whenNotPaused atStage(Stages.OfferingStarted) {
-        if (whitelistA[msg.sender]) {
-            buyTokensAList();
-        } else if (whitelistB[msg.sender]) {
-            buyTokensBList();
-        } else if (whitelistC[msg.sender]) {
-            buyTokensCList();
-        } else if (whitelistD[msg.sender]) {
-            buyTokensDList();
+        if (whitelists[0][msg.sender]) {
+            buyTokensTier0();
+        } else if (whitelists[1][msg.sender]) {
+            buyTokensTier1();
         } else {
             revert();
         }
     }
 
-    function allocateTokens(address _to, uint amountWei, uint amountAttoBee)
+/*
+* consider moving logic to another contract
+    function allocateTokens(address _to, uint256 amountWei, uint256 amountAttoBee)
         public
         onlyOwner
     {
@@ -229,27 +156,24 @@ contract BeeTokenOffering is Pausable {
         updateFundingCap();
     }
     
-    function allocateTokensArray(address[] _to, uint[] amountWei, uint[] amountAttoBee)
+    function allocateTokensArray(address[] _to, uint256[] amountWei, uint256[] amountAttoBee)
         external
         onlyOwner
     {
         require(_to.length == amountWei.length);
         require(_to.length == amountAttoBee.length);
-        for (uint i = 0; i < _to.length; i++) {
+        for (uint32 i = 0; i < _to.length; i++) {
             allocateTokens(_to[i], amountWei[i], amountAttoBee[i]);
         }
     }
+*/
     
-    function currentTime() public view returns (uint _time) {
-        return now;
-    }
-    
-    // Return true if ico event has ended
+    // Return true if token sale has ended
     function hasEnded() public view returns (bool) {
         return now > endTime;
     }
     
-    function buyTokensList(uint amount) internal {
+    function buyTokensTier(uint256 amount) internal {
         address participant = msg.sender;
         require(participant != address(0));
         require(validPurchase());
@@ -259,9 +183,9 @@ contract BeeTokenOffering is Pausable {
         // Calculate token amount to be distributed
         uint256 tokens = weiAmount.mul(rate);
 
-        if (now < doubleTime) {
+        if (now < capDoublingTimestamp) {
             require(contributions[participant] + weiAmount <= amount);
-        } else if (now < uncappedTime) {
+        } else if (now < capReleaseTimestamp) {
             require(contributions[participant] + weiAmount <= amount*2);
         } else {
             require(contributions[participant] + weiAmount <= FUNDING_ETH_HARD_CAP);
@@ -274,7 +198,9 @@ contract BeeTokenOffering is Pausable {
             revert();
         }
         
-        TokenPurchase(msg.sender, participant, weiAmount, tokens);       
+        // Transfer funds to beneficiary
+        beneficiary.transfer(weiAmount);
+        TokenPurchase(msg.sender, weiAmount, tokens);       
         updateFundingCap();
     }
 
@@ -290,7 +216,7 @@ contract BeeTokenOffering is Pausable {
     function validPurchase() internal view returns (bool) {
         bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        bool withinFunding = weiRaised + msg.value <= FUNDING_ETH_HARD_CAP;  
+        bool withinFunding = weiRaised.add(msg.value) <= FUNDING_ETH_HARD_CAP;  
         return withinPeriod && nonZeroPurchase && withinFunding;
     }
 

@@ -34,8 +34,9 @@ module.exports = function (deployer, network, accounts) {
         })
     }).then(() => {
         const arbitrationAddress = accounts[1];
+        const arbitrationFee = 10;
         return deployer.deploy(
-            BeePayments, arbitrationAddress, { from: owner }
+            BeePayments, arbitrationAddress, arbitrationFee, { from: owner }
         ).then(() => {
             return BeePayments.deployed().then(instance => {
                 beePayments = instance;
