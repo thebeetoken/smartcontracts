@@ -109,7 +109,7 @@ contract BeeTokenOffering is Pausable {
      * The constructor of the contract.
      * Note: tierCaps[tier] define the individual contribution limits in Wei of each address
      * per tier within the first tranche of the sale (sale start ~ capDoublingTimestamp)
-     * these limits are doubled between capDoublingTimestamp~capReleaseTimestamp
+     * these limits are doubled between capDoublingTimestamp ~ capReleaseTimestamp
      * and are lifted completely between capReleaseTimestamp ~ end time
      *  
      * @param _rate Number of beetokens per ether
@@ -174,7 +174,7 @@ contract BeeTokenOffering is Pausable {
         startTime = now;
         capDoublingTimestamp = startTime + 24 hours;
         capReleaseTimestamp = startTime + 48 hours;
-        endTime = startTime.add(durationInSeconds);
+        endTime = capReleaseTimestamp.add(durationInSeconds);
     }
 
     /**
