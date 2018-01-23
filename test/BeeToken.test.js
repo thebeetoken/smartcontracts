@@ -136,8 +136,8 @@ contract('BeeToken (transfers)', function (accounts) {
         assert.equal(offeringAllowance, 1000, 'new offering allowance');
         const offeringAddr = await token.tokenOfferingAddr();
         assert.equal(offeringAddr, offeringAddress);
-        let totalOfferingAllowance = await token.tokenOfferingAllowance();
-        assert.equal(totalOfferingAllowance, 1.5e+26, 'total offering allowance');
+        let totalOfferingAllowance = await token.allowance(owner, offeringAddress);
+        assert.equal(totalOfferingAllowance, 1000, 'total offering allowance');
 
 
         let userBalance = await token.balanceOf(user1);
@@ -146,8 +146,8 @@ contract('BeeToken (transfers)', function (accounts) {
         userBalance = await token.balanceOf(user1);
         assert.equal(userBalance, 900, 'new user balance');
 
-        totalOfferingAllowance = await token.tokenOfferingAllowance();
-        assert.equal(totalOfferingAllowance, 1.5e+26 - 999, 'new total offering allowance');
+        totalOfferingAllowance = await token.allowance(owner, offeringAddress);
+        assert.equal(totalOfferingAllowance, 1000 - 900, 'new total offering allowance');
     });
 
     it('Transfer to invalid destination address', async function () {

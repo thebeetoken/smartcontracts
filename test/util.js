@@ -66,6 +66,7 @@ module.exports = {
 
     toBee : toEther,
 
+    halfEther : toEther(0.5),
     oneEther : toEther(1),
     twoEther : toEther(2),
     threeEther : toEther(3),
