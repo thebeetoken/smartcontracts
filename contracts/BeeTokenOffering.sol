@@ -36,7 +36,7 @@ contract BeeTokenOffering is Pausable {
     uint256 public capReleaseTimestamp;
 
     // Contribution limits in Wei per tier
-    uint256[2] public tierCaps;
+    uint256[3] public tierCaps;
 
     // whitelist of investor address for each tier
     mapping(uint8 => mapping(address => bool)) public whitelists;
@@ -82,8 +82,10 @@ contract BeeTokenOffering is Pausable {
         require(tokenAddress != address(0));
         token = BeeToken(tokenAddress);
 
-        tierCaps[0] = _baseCap.mul(2) * 1 ether; // Contribution cap per tier in Wei
-        tierCaps[1] = _baseCap * 1 ether;
+        // Contribution cap per tier in Wei
+        tierCaps[0] = _baseCap.mul(3) * 1 ether;
+        tierCaps[1] = _baseCap.mul(2) * 1 ether;
+        tierCaps[2] = _baseCap * 1 ether;
 
         rate = _rate; // BEE to Ether
         beneficiary = _beneficiary;
@@ -129,6 +131,8 @@ contract BeeTokenOffering is Pausable {
             buyTokensTier(0);
         } else if (whitelists[1][msg.sender]) {
             buyTokensTier(1);
+        } else if (whitelists[2][msg.sender]) {
+            buyTokensTier(2);
         } else {
             revert();
         }

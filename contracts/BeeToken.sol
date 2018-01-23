@@ -50,9 +50,11 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
 
     function setTokenOffering(address _tokenOfferingAddr, uint256 _amountForSale) external onlyOwner onlyTokenOfferingAddrNotSet {
         require(!transferEnabled);
-        require(_amountForSale <= TOKEN_OFFERING_ALLOWANCE);
 
-        approve(_tokenOfferingAddr, _amountForSale);
+        uint256 amount = (_amountForSale == 0) ? TOKEN_OFFERING_ALLOWANCE : _amountForSale;
+        require(amount <= TOKEN_OFFERING_ALLOWANCE);
+
+        approve(_tokenOfferingAddr, amount);
         tokenOfferingAddr = _tokenOfferingAddr;
     }
     
