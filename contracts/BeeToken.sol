@@ -33,7 +33,7 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
      * Permissions:
      *                                                       Owner    Admin    OffeirngContract    Others
      * transfer (before transferEnabled is true)               x        x            x               x
-     * transferForm (before transferEnabled is true)           x        v            v               x
+     * transferFrom (before transferEnabled is true)           x        v            v               x
      * transfer/transferFrom after transferEnabled is true     v        x            x               v
      */
     modifier onlyWhenTransferAllowed() {
