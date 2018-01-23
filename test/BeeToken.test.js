@@ -59,6 +59,16 @@ contract('BeeToken (Basic Tests)', function (accounts) {
         assert.equal(await token.tokenOfferingAddr(), util.zeroAddress);
         await token.setTokenOffering(offering.address, 100);
         assert.equal(await token.tokenOfferingAddr(), offering.address);
+        let offeringAllowance = await token.allowance(owner, offering.address);
+        assert.equal(offeringAllowance, 100);
+    });
+
+    it("should max out token offering when allowed value is 0", async function () {
+        assert.equal(await token.tokenOfferingAddr(), util.zeroAddress);
+        await token.setTokenOffering(offering.address, 0);
+        assert.equal(await token.tokenOfferingAddr(), offering.address);
+        let offeringAllowance = await token.allowance(owner, offering.address);
+        assert.equal(offeringAllowance, 1.5e26);
     });
 
     it("should not allow non-owner to set token offering", async function () {
