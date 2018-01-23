@@ -25,7 +25,7 @@ contract BeeTokenOffering is Pausable {
     uint256 public weiRaised;
 
     /**
-     * Contribution limit at each stage by time:
+     * Individual contribution limit at each stage by time:
      * 1) sale start ~ capDoublingTimestamp: 1x of contribution limit per tier (1 * tierCaps[tier])
      * 2) capDoublingTimestamp ~ capReleaseTimestamp: limit per participant is raised to 2x of contribution limit per tier (2 * tierCaps[tier])
      * 3) capReleaseTimestamp ~ sale end: no limit per participant as along as total Wei raised is within FUNDING_ETH_HARD_CAP
@@ -33,13 +33,13 @@ contract BeeTokenOffering is Pausable {
     uint256 public capDoublingTimestamp;
     uint256 public capReleaseTimestamp;
 
-    // Contribution limits in Wei per tier
+    // Individual contribution limits in Wei per tier
     uint256[3] public tierCaps;
 
     // Whitelists of participant address for each tier
     mapping(uint8 => mapping(address => bool)) public whitelists;
 
-    // contributions in Wei for each participant
+    // Contributions in Wei for each participant
     mapping(address => uint256) public contributions;
 
     // Funding cap in ETH. Change to equal $5M at time of token offering
@@ -95,11 +95,11 @@ contract BeeTokenOffering is Pausable {
         uint256 initialCapInWei = tierCaps[tier];
         
         if (now < capDoublingTimestamp) {
-            require(contributions[participant] + contributionInWei <= initialCapInWei);
+            require(contributions[participant].add(contributionInWei) <= initialCapInWei);
         } else if (now < capReleaseTimestamp) {
-            require(contributions[participant] + contributionInWei <= initialCapInWei * 2);
+            require(contributions[participant].add(contributionInWei) <= initialCapInWei.mul(2));
         } else {
-            require(contributions[participant] + contributionInWei <= FUNDING_ETH_HARD_CAP);
+            require(contributions[participant].add(contributionInWei) <= FUNDING_ETH_HARD_CAP);
         }
 
         _;
@@ -107,8 +107,11 @@ contract BeeTokenOffering is Pausable {
 
     /**
      * The constructor of the contract.
-     * TODO: explanation of cap per tier is defined
-     *
+     * Note: tierCaps[tier] define the individual contribution limits in Wei of each address
+     * per tier within the first tranche of the sale (sale start ~ capDoublingTimestamp)
+     * these limits are doubled between capDoublingTimestamp ~ capReleaseTimestamp
+     * and are lifted completely between capReleaseTimestamp ~ end time
+     *  
      * @param _rate Number of beetokens per ether
      * @param _beneficiary Address where funds are collected
      * @param _baseCap Base contribution limit in ether per address
@@ -171,7 +174,7 @@ contract BeeTokenOffering is Pausable {
         startTime = now;
         capDoublingTimestamp = startTime + 24 hours;
         capReleaseTimestamp = startTime + 48 hours;
-        endTime = startTime.add(durationInSeconds);
+        endTime = capReleaseTimestamp.add(durationInSeconds);
     }
 
     /**
@@ -215,7 +218,7 @@ contract BeeTokenOffering is Pausable {
      * 2) [capDoublingTimestamp ~ capReleaseTimestamp]: limit per participant is raised to 2x of contribution limit per tier (2 * tierCaps[tier])
      * 3) [capReleaseTimestamp ~ offering ends]:        no limit per participant as along as total Wei raised is within FUNDING_ETH_HARD_CAP
      *
-     * @param tier Num of tier to buy tokens in
+     * @param tier Index of tier of whitelisted participant
      */
     function buyTokensTier(uint8 tier) internal validPurchase(tier) {
         address participant = msg.sender;
@@ -246,7 +249,7 @@ contract BeeTokenOffering is Pausable {
      *
      * @param to Participant address to send beetokens to
      * @param amountWei Contribution in Wei
-     * @param amountBeeToSend Amount of beetokens to be sent to parcitipant
+     * @param amountBeeToSend Amount of beetokens (*10**18) to be sent to parcitipant 
      */
     function allocateTokensBeforeOffering(address to, uint256 amountWei, uint256 amountBeeToSend)
         public
