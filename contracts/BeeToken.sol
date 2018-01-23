@@ -4,9 +4,15 @@ import "zeppelin-solidity/contracts/token/StandardToken.sol";
 import "zeppelin-solidity/contracts/token/BurnableToken.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract BeeToken is StandardToken, BurnableToken, Ownable {
-    // Note: Token Offering == Initial Coin Offering(ICO)
+/*
+ * BeeToken is a standard ERC20 token with some additional functionalities:
+ * - Transfers are only enabled after contract owner enables it (after the ICO)
+ * - Contract sets 30% of the total supply as allowance for ICO contract
+ *
+ * Note: Token Offering == Initial Coin Offering(ICO)
+ */
 
+contract BeeToken is StandardToken, BurnableToken, Ownable {
     string public constant symbol = "BEE";
     string public constant name = "Bee Token";
     uint8 public constant decimals = 18;
