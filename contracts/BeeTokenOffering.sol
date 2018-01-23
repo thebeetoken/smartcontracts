@@ -66,10 +66,10 @@ contract BeeTokenOffering is Pausable {
     /**
      * Modifier that requires certain stage before executing the main function body
      *
-     * @param _stage Value that the current stage is required to match
+     * @param expectedStage Value that the current stage is required to match
      */
-    modifier atStage(Stages _stage) {
-        require(stage == _stage);
+    modifier atStage(Stages expectedStage) {
+        require(stage == expectedStage);
         _;
     }
 
@@ -112,29 +112,29 @@ contract BeeTokenOffering is Pausable {
      * these limits are doubled between capDoublingTimestamp ~ capReleaseTimestamp
      * and are lifted completely between capReleaseTimestamp ~ end time
      *  
-     * @param _rate Number of beetokens per ether
-     * @param _beneficiary Address where funds are collected
-     * @param _baseCap Base contribution limit in ether per address
+     * @param etherToBeeRate Number of beetokens per ether
+     * @param beneficiaryAddr Address where funds are collected
+     * @param baseContributionCapInEther Base contribution limit in ether per address
      */
     function BeeTokenOffering(
-        uint256 _rate, 
-        address _beneficiary, 
-        uint256 _baseCap,
+        uint256 etherToBeeRate, 
+        address beneficiaryAddr, 
+        uint256 baseContributionCapInEther,
         address tokenAddress
     ) public {
-        require(_rate > 0);
-        require(_beneficiary != address(0));
+        require(etherToBeeRate > 0);
+        require(beneficiaryAddr != address(0));
         require(tokenAddress != address(0));
 
         token = BeeToken(tokenAddress);
-        rate = _rate;
-        beneficiary = _beneficiary;
+        rate = etherToBeeRate;
+        beneficiary = beneficiaryAddr;
         stage = Stages.Setup;
 
         // Contribution cap per tier in Wei
-        tierCaps[0] = _baseCap.mul(3) * 1 ether;
-        tierCaps[1] = _baseCap.mul(2) * 1 ether;
-        tierCaps[2] = _baseCap * 1 ether;
+        tierCaps[0] = baseContributionCapInEther.mul(3) * 1 ether;
+        tierCaps[1] = baseContributionCapInEther.mul(2) * 1 ether;
+        tierCaps[2] = baseContributionCapInEther * 1 ether;
     }
 
     /**
