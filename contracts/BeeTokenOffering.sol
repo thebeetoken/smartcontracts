@@ -3,8 +3,6 @@ import "./BeeToken.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
 contract BeeTokenOffering is Pausable {
-
-
     using SafeMath for uint256;
 
     // Start and end timestamps where contributions are allowed (both inclusive)
