@@ -80,6 +80,7 @@ contract BeeTokenOffering is Pausable {
     modifier validPurchase(uint8 tier) {
         require(tier < tierCaps.length);
         require(now >= startTime && now <= endTime && stage == Stages.OfferingStarted);
+        require(msg.value >= 100000000000000000);
 
         uint256 contributionInWei = msg.value;
         address participant = msg.sender;
