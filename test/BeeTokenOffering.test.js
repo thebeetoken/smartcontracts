@@ -36,7 +36,7 @@ contract('Offering stage changes correctly', function (accounts) {
     it('Start and end offering correctly', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const offering = await BeeTokenOffering.new(
-            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
 
         let stage = await offering.stage();
@@ -64,7 +64,7 @@ contract('Offering stage changes correctly', function (accounts) {
     it('End offering should fail before started', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const offering = await BeeTokenOffering.new(
-            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
 
         let stage = await offering.stage();
@@ -76,7 +76,7 @@ contract('Offering stage changes correctly', function (accounts) {
     it('Purchase should fail before offering is started', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const offering = await BeeTokenOffering.new(
-            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
         await token.setTokenOffering(offering.address, 0);
 
@@ -88,11 +88,29 @@ contract('Offering stage changes correctly', function (accounts) {
         await util.assertRevert(offering.sendTransaction({ value: util.oneEther, from: user2 }));
     });
 
+    it('Purchase should fail after offering is ended', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const offering = await BeeTokenOffering.new(
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
+        );
+        await token.setTokenOffering(offering.address, 0);
+
+        await offering.whitelist(0, [user2, user4]);
+        await offering.startOffering(300, { from: owner });
+
+        await offering.sendTransaction({ value: util.toEther(1), from: user2 });
+
+        await util.timeTravelInSeconds(48 * 3600 + 400);
+        assert.isTrue(await offering.hasEnded());
+
+        await util.assertRevert(offering.sendTransaction({ value: util.toEther(1), from: user4 }));
+    });
+
     it('Purchase should succeed after offering is started and whitelisted', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const rate = 5000;
         const offering = await BeeTokenOffering.new(
-            rate, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            rate, beneficiary, util.toEther(1), token.address, { from: owner }
         );
 
         await token.setTokenOffering(offering.address, 0);
@@ -113,7 +131,7 @@ contract('Offering stage changes correctly', function (accounts) {
         const token = await BeeToken.new(admin, { from: owner });
         const rate = 1;
         const offering = await BeeTokenOffering.new(
-            rate, beneficiary, 100 /*base cap*/, token.address, { from: owner }
+            rate, beneficiary, util.toEther(100), token.address, { from: owner }
         );
 
         await token.setTokenOffering(offering.address, 50 * 10 ** 18);
@@ -147,7 +165,7 @@ contract('Whitelist Crowdsale', function (accounts) {
     beforeEach(async function () {
         token = await BeeToken.new(admin, { from: owner });
         offering = await BeeTokenOffering.new(
-            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
 
         // automatically start offering
@@ -270,7 +288,7 @@ contract('Presale allocation', function (accounts) {
     beforeEach(async function () {
         token = await BeeToken.new(admin, { from: owner });
         offering = await BeeTokenOffering.new(
-            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
     })
 
@@ -327,5 +345,64 @@ contract('Presale allocation', function (accounts) {
         await util.assertRevert(offering.batchAllocateTokensBeforeOffering([user3, user4], [1000, 1000]));
         assert.equal((await token.balanceOf(user3)), 0);
         assert.equal((await token.balanceOf(user4)), 0);
+    });
+});
+
+contract('Individual contribution cap', function (accounts) {
+    const owner = accounts[0];
+    const admin = accounts[1];
+    const user2 = accounts[2];
+    const user3 = accounts[3];
+    const beneficiary = accounts[7];
+
+    var token = null;
+    var offering = null;
+    var rate = null
+    var extensionDuration = 48 * 3600;
+    beforeEach(async function () {
+        token = await BeeToken.new(admin, { from: owner });
+        rate = 1
+        offering = await BeeTokenOffering.new(
+            rate, beneficiary, util.toEther(1), token.address, { from: owner }
+        );
+
+        // automatically start offering
+        await token.setTokenOffering(offering.address, 0);
+        await offering.startOffering(extensionDuration);
+    });
+
+    it('cap shoud change over time', async function () {
+        // user in tier 0, so cap is 3x of the base cap, 3 ethers
+        await offering.whitelist(0, [user2], { from: owner });
+        assert.equal(await offering.contributions(user2), 0);
+        assert.equal(await offering.weiRaised(), 0);
+
+        // 1) cap should be 3 during first traunch
+        const contribution1 = 3;
+        const unit = 10**18;
+
+        await offering.sendTransaction({ value: util.toEther(contribution1), from: user2 });
+        assert.equal(await offering.contributions(user2), contribution1 * rate * unit);
+        assert.equal((await offering.weiRaised()).toNumber(), contribution1 * unit);
+
+        // 2) cap should be 6 during the second traunch
+        const contribution2 = 3;
+        // before entering the 2nd traunch
+        await util.assertRevert(offering.sendTransaction({ value: util.toEther(contribution2), from: user2 }));
+        await util.timeTravelInSeconds(25 * 3600); // fast-forward by 25 hours to enter the third traunch
+        // after entering the 2nd traunch
+        await offering.sendTransaction({ value: util.toEther(contribution2), from: user2 });
+        assert.equal(await offering.contributions(user2), (contribution1 + contribution2) * rate * unit);
+        assert.equal((await offering.weiRaised()).toNumber(), (contribution1 + contribution2) * unit);
+
+        // 3) no individual cap, only hard cap
+        const contribution3 = 10;
+        // after entering the 3rd traunch
+        await util.assertRevert(offering.sendTransaction({ value: util.toEther(contribution3), from: user2 }));
+        await util.timeTravelInSeconds(25 * 3600); // fast-forward by another 25 hours to enter the 3rd traunch
+        // after entering the 3rd traunch
+        await offering.sendTransaction({ value: util.toEther(contribution3), from: user2 });
+        assert.equal(await offering.contributions(user2), (contribution1 + contribution2 + contribution3) * rate * unit);
+        assert.equal((await offering.weiRaised()).toNumber(), (contribution1 + contribution2 + contribution3) * unit);
     });
 });

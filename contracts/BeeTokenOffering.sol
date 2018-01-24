@@ -85,8 +85,8 @@ contract BeeTokenOffering is Pausable {
      */
     modifier validPurchase(uint8 tier) {
         require(tier < tierCaps.length);
-        require(now >= startTime && now <= endTime);
-        
+        require(now >= startTime && now <= endTime && stage == Stages.OfferingStarted);
+
         uint256 contributionInWei = msg.value;
         address participant = msg.sender;
         require(participant != address(0) && contributionInWei > 0);
@@ -98,8 +98,6 @@ contract BeeTokenOffering is Pausable {
             require(contributions[participant].add(contributionInWei) <= initialCapInWei);
         } else if (now < capReleaseTimestamp) {
             require(contributions[participant].add(contributionInWei) <= initialCapInWei.mul(2));
-        } else {
-            require(contributions[participant].add(contributionInWei) <= FUNDING_ETH_HARD_CAP);
         }
 
         _;
@@ -132,9 +130,9 @@ contract BeeTokenOffering is Pausable {
         stage = Stages.Setup;
 
         // Contribution cap per tier in Wei
-        tierCaps[0] = baseContributionCapInEther.mul(3) * 1 ether;
-        tierCaps[1] = baseContributionCapInEther.mul(2) * 1 ether;
-        tierCaps[2] = baseContributionCapInEther * 1 ether;
+        tierCaps[0] = baseContributionCapInEther.mul(3);
+        tierCaps[1] = baseContributionCapInEther.mul(2);
+        tierCaps[2] = baseContributionCapInEther;
     }
 
     /**
@@ -181,8 +179,7 @@ contract BeeTokenOffering is Pausable {
      * End the offering
      */
     function endOffering() public onlyOwner atStage(Stages.OfferingStarted) {
-        endTime = now;
-        stage = Stages.OfferingEnded;
+        endOfferingImpl();
     }
     
     /**
@@ -235,15 +232,22 @@ contract BeeTokenOffering is Pausable {
         contributions[participant] = contributions[participant].add(contributionInWei);
         // Check if the funding cap has been reached, end the offering if so
         if (weiRaised >= FUNDING_ETH_HARD_CAP) {
-            endTime = now;
-            stage = Stages.OfferingEnded;
+            endOfferingImpl();
         }
         
         // Transfer funds to beneficiary
         beneficiary.transfer(contributionInWei);
         TokenPurchase(msg.sender, contributionInWei, tokens);       
     }
-    
+
+    /**
+     * End token offering by set the stage and endTime
+     */
+    function endOfferingImpl() internal {
+        endTime = now;
+        stage = Stages.OfferingEnded;
+    }
+
     /**
      * Allocate tokens for presale participants before public offering, can only be executed at Stages.Setup stage.
      *
