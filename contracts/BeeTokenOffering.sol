@@ -71,7 +71,7 @@ contract BeeTokenOffering is Pausable {
      * Modifier that validates a purchase at a tier
      * All the following has to be met:
      * - current time within the offering period
-     * - valid sender address and ether value greater than 0
+     * - valid sender address and ether value greater than 0.1
      * - total Wei raised not greater than FUNDING_ETH_HARD_CAP
      * - contribution per perticipant within contribution limit
      *
@@ -83,8 +83,8 @@ contract BeeTokenOffering is Pausable {
 
         uint256 contributionInWei = msg.value;
         address participant = msg.sender;
-        require(participant != address(0) && contributionInWei > 0);
-        require(weiRaised.add(contributionInWei) <= FUNDING_ETH_HARD_CAP);  
+        require(participant != address(0) && contributionInWei > 100000000000000000);
+        require(weiRaised.add(contributionInWei) <= FUNDING_ETH_HARD_CAP);
 
         uint256 initialCapInWei = tierCaps[tier];
         

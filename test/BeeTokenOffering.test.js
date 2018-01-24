@@ -127,6 +127,24 @@ contract('Offering stage changes correctly', function (accounts) {
         assert.equal(balance, rate * contribution * 10 ** (18));
     });
 
+    it('Purchase should fail when sending less than .1 ether', async function () {
+        const token = await BeeToken.new(admin, { from: owner });
+        const rate = 5000;
+        const offering = await BeeTokenOffering.new(
+            rate, beneficiary, util.toEther(1), token.address, { from: owner }
+        );
+
+        await token.setTokenOffering(offering.address, 0);
+
+        await offering.whitelist(0, [user2]);
+        await offering.startOffering(300);
+        let stage = await offering.stage();
+        assert.equal(stage, 1, 'stage should be OfferingStarted');
+
+        const contribution = 0.099;
+        await util.assertRevert(offering.sendTransaction({ value: util.toEther(contribution), from: user2 }));
+    });
+
     it('Beneficiary gets ether correctly', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const rate = 5000;
