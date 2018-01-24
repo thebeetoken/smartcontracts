@@ -4,20 +4,6 @@ const BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
 const util = require('./util');
 const BigNumber = web3.BigNumber;
 
-const timeTravel = function (time) {
-    return new Promise((resolve, reject) => {
-        web3.currentProvider.sendAsync({
-            jsonrpc: "2.0",
-            method: "evm_increaseTime",
-            params: [time], // 86400 is num seconds in day
-            id: new Date().getTime()
-        }, (err, result) => {
-            if (err) { return reject(err) }
-            return resolve(result)
-        });
-    })
-}
-
 contract('BeeToken (Basic Tests)', function (accounts) {
     // account[0] points to the owner on the testRPC setup
     const owner = accounts[0];

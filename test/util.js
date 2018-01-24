@@ -1,26 +1,8 @@
-function toEther (n) {
+function toEther(n) {
     return web3.toWei(n, "ether");
 }
 
 module.exports = {
-    expectThrow : async function(promise) {
-        try {
-            await
-            promise;
-        } catch (error) {
-            const invalidOpcode = error.message.search('invalid opcode') >= 0;
-            const invalidJump = error.message.search('invalid JUMP') >= 0;
-            const outOfGas = error.message.search('out of gas') >= 0;
-            const reverFound = error.message.search('revert') >= 0;
-            assert(
-                invalidOpcode || invalidJump || outOfGas || reverFound,
-                "Expected throw, got '" + error + "' instead",
-            );
-            return;
-        }
-        assert.fail('Expected throw not received');
-    },
-
     assertRevert: async promise => {
         try {
             await promise;
@@ -30,52 +12,43 @@ module.exports = {
             assert(revetFound, `Expected "revert", got ${error} instead`);
         }
     },
-    
-    logUserBalances : async function logUserBalances (token, accounts) {
-        console.log("");
-        console.log("User Balances:");
-        console.log("--------------");
-        console.log(`Owner: ${(await token.balanceOf(accounts[0])).toNumber()}`);
-        console.log(`User1: ${(await token.balanceOf(accounts[1])).toNumber()}`);
-        console.log(`User2: ${(await token.balanceOf(accounts[2])).toNumber()}`);
-        console.log(`User3: ${(await token.balanceOf(accounts[3])).toNumber()}`);
-        console.log(`User4: ${(await token.balanceOf(accounts[4])).toNumber()}`);
 
-        console.log("--------------");
-        console.log("");
+    timeTravelInSeconds: function (durationInSec) {
+        const id = Date.now()
+        return new Promise((resolve, reject) => {
+            web3.currentProvider.sendAsync({
+                jsonrpc: '2.0',
+                method: 'evm_increaseTime',
+                params: [durationInSec],
+                id: id,
+            }, err1 => {
+                if (err1) return reject(err1)
+
+                web3.currentProvider.sendAsync({
+                    jsonrpc: '2.0',
+                    method: 'evm_mine',
+                    id: id + 1,
+                }, (err2, res) => {
+                    return err2 ? reject(err2) : resolve(res)
+                })
+            })
+        })
     },
 
-    logEthBalances : async function logEthBalances (token, offering, accounts) {
-        console.log("");
-        console.log("Eth Balances:");
-        console.log("-------------");
-        console.log(`Owner: ${(await web3.eth.getBalance(accounts[0])).toNumber()}`);
-        console.log(`User1: ${(await web3.eth.getBalance(accounts[1])).toNumber()}`);
-        console.log(`User2: ${(await web3.eth.getBalance(accounts[2])).toNumber()}`);
-        console.log(`User3: ${(await web3.eth.getBalance(accounts[3])).toNumber()}`);
-        console.log(`User4: ${(await web3.eth.getBalance(accounts[4])).toNumber()}`);
-        console.log(`Sale : ${(await web3.eth.getBalance(sale.address)).toNumber()}`);
-        console.log(`Token: ${(await web3.eth.getBalance(token.address)).toNumber()}`);
+    toEther: toEther,
 
+    toBee: toEther,
 
-        console.log("--------------");
-        console.log("");
-    },
-
-    toEther : toEther,
-
-    toBee : toEther,
-
-    halfEther : toEther(0.5),
-    oneEther : toEther(1),
-    twoEther : toEther(2),
-    threeEther : toEther(3),
-    fourEther : toEther(4),
-    fiveEther : toEther(5),
-    sixEther : toEther(6),
-    eightEther : toEther(8), 
-    tenEther : toEther(10),
-    hundredEther : toEther(100),
+    halfEther: toEther(0.5),
+    oneEther: toEther(1),
+    twoEther: toEther(2),
+    threeEther: toEther(3),
+    fourEther: toEther(4),
+    fiveEther: toEther(5),
+    sixEther: toEther(6),
+    eightEther: toEther(8),
+    tenEther: toEther(10),
+    hundredEther: toEther(100),
 
     GAS_LIMIT_IN_WEI: 50000000000,
     zeroAddress: '0x0000000000000000000000000000000000000000',

@@ -15,21 +15,13 @@ contract BeeTokenOffering is Pausable {
     // Token to be sold
     BeeToken public token;
 
-    /* 
-     * Tokens per ether
-     * 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
-     */ 
+    // Price of the tokens as in tokens per ether
     uint256 public rate;
 
     // Amount of raised in Wei (1 ether)
     uint256 public weiRaised;
 
-    /**
-     * Individual contribution limit at each stage by time:
-     * 1) sale start ~ capDoublingTimestamp: 1x of contribution limit per tier (1 * tierCaps[tier])
-     * 2) capDoublingTimestamp ~ capReleaseTimestamp: limit per participant is raised to 2x of contribution limit per tier (2 * tierCaps[tier])
-     * 3) capReleaseTimestamp ~ sale end: no limit per participant as along as total Wei raised is within FUNDING_ETH_HARD_CAP
-     */
+    // Timelines for different contribution limit policy
     uint256 public capDoublingTimestamp;
     uint256 public capReleaseTimestamp;
 
@@ -54,6 +46,8 @@ contract BeeTokenOffering is Pausable {
         OfferingEnded
     }
 
+    event OfferingOpens(uint256 startTime, uint256 endTime);
+    event OfferingCloses(uint256 endTime, uint256 totalWeiRaised);
     /**
      * Event for token purchase logging
      *
@@ -66,10 +60,10 @@ contract BeeTokenOffering is Pausable {
     /**
      * Modifier that requires certain stage before executing the main function body
      *
-     * @param _stage Value that the current stage is required to match
+     * @param expectedStage Value that the current stage is required to match
      */
-    modifier atStage(Stages _stage) {
-        require(stage == _stage);
+    modifier atStage(Stages expectedStage) {
+        require(stage == expectedStage);
         _;
     }
 
@@ -85,8 +79,8 @@ contract BeeTokenOffering is Pausable {
      */
     modifier validPurchase(uint8 tier) {
         require(tier < tierCaps.length);
-        require(now >= startTime && now <= endTime);
-        
+        require(now >= startTime && now <= endTime && stage == Stages.OfferingStarted);
+
         uint256 contributionInWei = msg.value;
         address participant = msg.sender;
         require(participant != address(0) && contributionInWei > 0);
@@ -98,8 +92,6 @@ contract BeeTokenOffering is Pausable {
             require(contributions[participant].add(contributionInWei) <= initialCapInWei);
         } else if (now < capReleaseTimestamp) {
             require(contributions[participant].add(contributionInWei) <= initialCapInWei.mul(2));
-        } else {
-            require(contributions[participant].add(contributionInWei) <= FUNDING_ETH_HARD_CAP);
         }
 
         _;
@@ -112,29 +104,29 @@ contract BeeTokenOffering is Pausable {
      * these limits are doubled between capDoublingTimestamp ~ capReleaseTimestamp
      * and are lifted completely between capReleaseTimestamp ~ end time
      *  
-     * @param _rate Number of beetokens per ether
-     * @param _beneficiary Address where funds are collected
-     * @param _baseCap Base contribution limit in ether per address
+     * @param etherToBeeRate Number of beetokens per ether
+     * @param beneficiaryAddr Address where funds are collected
+     * @param baseContributionCapInEther Base contribution limit in ether per address
      */
     function BeeTokenOffering(
-        uint256 _rate, 
-        address _beneficiary, 
-        uint256 _baseCap,
+        uint256 etherToBeeRate, 
+        address beneficiaryAddr, 
+        uint256 baseContributionCapInEther,
         address tokenAddress
     ) public {
-        require(_rate > 0);
-        require(_beneficiary != address(0));
+        require(etherToBeeRate > 0);
+        require(beneficiaryAddr != address(0));
         require(tokenAddress != address(0));
 
         token = BeeToken(tokenAddress);
-        rate = _rate;
-        beneficiary = _beneficiary;
+        rate = etherToBeeRate;
+        beneficiary = beneficiaryAddr;
         stage = Stages.Setup;
 
         // Contribution cap per tier in Wei
-        tierCaps[0] = _baseCap.mul(3) * 1 ether;
-        tierCaps[1] = _baseCap.mul(2) * 1 ether;
-        tierCaps[2] = _baseCap * 1 ether;
+        tierCaps[0] = baseContributionCapInEther.mul(3);
+        tierCaps[1] = baseContributionCapInEther.mul(2);
+        tierCaps[2] = baseContributionCapInEther;
     }
 
     /**
@@ -145,7 +137,7 @@ contract BeeTokenOffering is Pausable {
     }
 
     /**
-     * Withdraw available ethers into beneficiary account
+     * Withdraw available ethers into beneficiary account, serves as a safety, should never be needed
      */
     function ownerSafeWithdrawal() external onlyOwner {
         beneficiary.transfer(this.balance);
@@ -175,14 +167,14 @@ contract BeeTokenOffering is Pausable {
         capDoublingTimestamp = startTime + 24 hours;
         capReleaseTimestamp = startTime + 48 hours;
         endTime = capReleaseTimestamp.add(durationInSeconds);
+        OfferingOpens(startTime, endTime);
     }
 
     /**
      * End the offering
      */
     function endOffering() public onlyOwner atStage(Stages.OfferingStarted) {
-        endTime = now;
-        stage = Stages.OfferingEnded;
+        endOfferingImpl();
     }
     
     /**
@@ -207,7 +199,7 @@ contract BeeTokenOffering is Pausable {
      * @return bool Return true if token offering has ended
      */
     function hasEnded() public view returns (bool) {
-        return now > endTime && stage != Stages.OfferingEnded;
+        return now > endTime || stage == Stages.OfferingEnded;
     }
 
     /**
@@ -235,32 +227,36 @@ contract BeeTokenOffering is Pausable {
         contributions[participant] = contributions[participant].add(contributionInWei);
         // Check if the funding cap has been reached, end the offering if so
         if (weiRaised >= FUNDING_ETH_HARD_CAP) {
-            endTime = now;
-            stage = Stages.OfferingEnded;
+            endOfferingImpl();
         }
         
         // Transfer funds to beneficiary
         beneficiary.transfer(contributionInWei);
         TokenPurchase(msg.sender, contributionInWei, tokens);       
     }
-    
+
+    /**
+     * End token offering by set the stage and endTime
+     */
+    function endOfferingImpl() internal {
+        endTime = now;
+        stage = Stages.OfferingEnded;
+        OfferingCloses(endTime, weiRaised);
+    }
+
     /**
      * Allocate tokens for presale participants before public offering, can only be executed at Stages.Setup stage.
      *
      * @param to Participant address to send beetokens to
-     * @param amountWei Contribution in Wei
-     * @param amountBeeToSend Amount of beetokens (*10**18) to be sent to parcitipant 
+     * @param tokens Amount of beetokens to be sent to parcitipant 
      */
-    function allocateTokensBeforeOffering(address to, uint256 amountWei, uint256 amountBeeToSend)
+    function allocateTokensBeforeOffering(address to, uint256 tokens)
         public
         onlyOwner
         atStage(Stages.Setup)
         returns (bool)
     {
-        // TODO: add logic to avoid double sending ?
-        contributions[to] = contributions[to].add(amountWei);
-
-        if (!token.transferFrom(token.owner(), to, amountBeeToSend)) {
+        if (!token.transferFrom(token.owner(), to, tokens)) {
             revert();
         }
         return true;
@@ -269,16 +265,16 @@ contract BeeTokenOffering is Pausable {
     /**
      * Bulk version of allocateTokensBeforeOffering
      */
-    function allocateTokensArrayBeforeOffering(address[] to, uint256[] amountWei, uint256[] amountBeeToSend)
+    function batchAllocateTokensBeforeOffering(address[] toList, uint256[] tokensList)
         external
         onlyOwner
         atStage(Stages.Setup)
         returns (bool)
     {
-        require(to.length == amountWei.length && to.length == amountBeeToSend.length);
+        require(toList.length == tokensList.length);
 
-        for (uint32 i = 0; i < to.length; i++) {
-            allocateTokensBeforeOffering(to[i], amountWei[i], amountBeeToSend[i]);
+        for (uint32 i = 0; i < toList.length; i++) {
+            allocateTokensBeforeOffering(toList[i], tokensList[i]);
         }
         return true;
     }
