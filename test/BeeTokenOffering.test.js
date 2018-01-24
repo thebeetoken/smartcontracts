@@ -2,89 +2,16 @@
 var BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
 var BeeToken = artifacts.require("./BeeToken.sol");
 var util = require("./util.js");
-var bigInt = require("big-integer");
-
-contract('BeeTokenOffering constructor', function (accounts) {
-    // account[0] points to the owner on the testRPC setup
-    var owner = accounts[0];
-    var admin = accounts[1];
-    var beneficiary = accounts[6];
-    var user2 = accounts[2];
-    var user3 = accounts[3];
-    var user4 = accounts[4];
-    var user5 = accounts[5];
-
-    var token = null;
-    var offering = null;
-    beforeEach(async function () {
-        token = await BeeToken.new(admin, { from: owner });
-        offering = await BeeTokenOffering.new(
-            5000, beneficiary, 10, token.address, { from: owner }
-        );
-    });
-
-    async function whitelistTierA(user) {
-        await offering.whitelist(0, [user], { from: owner });
-    }
-
-    async function sendTransaction(value, user) {
-        await offering.sendTransaction({ value: util.toEther(value), from: user });
-    }
-
-    async function balanceOf(user) {
-        return (await token.balanceOf(user)).toNumber();
-    }
-    
-    it("should sell tokens at a prespecified rate", async function () {
-        await token.setTokenOffering(offering.address, 0);
-        await offering.startOffering(300);
-        await whitelistTierA(user2);
-
-        // 1 ETH is well below the cap
-        const contribution1 = 1;
-        await sendTransaction(contribution1, user2);
-        assert.equal(await balanceOf(user2), util.toEther(await offering.rate()));
-        assert.equal((await offering.weiRaised()).toNumber(), util.toEther(contribution1));
-
-        // Sending more ETH to reach the cap
-        const contribution2 = 4;
-        const sum = contribution1 + contribution2;
-        await sendTransaction(contribution2, user2);
-        assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
-        assert.equal((await offering.weiRaised()).toNumber(), util.toEther(sum));
-    });
-
-    it("should disallow unregistered users to buy tokens", async function () {
-        await token.setTokenOffering(offering.address, 0);
-        await util.assertRevert(sendTransaction(1, user5));
-    });
-
-    it("should reject transactions with 0 value", async function () {
-        await token.setTokenOffering(offering.address, 0);
-        await util.assertRevert(sendTransaction(0, user5));
-    });
-
-    it("should not allow non-owners to call ownerSafeWithdraw", async function () {
-        await token.setTokenOffering(offering.address, 0);
-        await util.assertRevert(offering.allocateTokensBeforeOffering(user3, util.oneEther, util.twoEther, { from: user2 }));
-    });
-
-    it("should allow transfers to pre-sale users", async function () {
-        await token.setTokenOffering(offering.address, 0);
-        await offering.allocateTokensBeforeOffering(user4, util.oneEther, util.oneEther, { from: owner });
-    });
-
-});
 
 contract('Whitelist Crowdsale', function (accounts) {
     var owner = accounts[0];
     var admin = accounts[1];
-    var beneficiary = accounts[7];
     var user2 = accounts[2];
     var user3 = accounts[3];
     var user4 = accounts[4];
     var user5 = accounts[5];
     var user6 = accounts[6];
+    var beneficiary = accounts[7];
 
     var token = null;
     var offering = null;
@@ -97,6 +24,41 @@ contract('Whitelist Crowdsale', function (accounts) {
         // automatically start offering
         await token.setTokenOffering(offering.address, 0);
         await offering.startOffering(300);
+    });
+
+    async function sendTransaction(value, user) {
+        await offering.sendTransaction({ value: util.toEther(value), from: user });
+    }
+
+    async function balanceOf(user) {
+        return (await token.balanceOf(user)).toNumber();
+    }
+
+    it("should sell tokens at a prespecified rate", async function () {
+        // user in tier 0, so cap is 3x of the base cap, 3 ethers
+        await offering.whitelist(0, [user2], { from: owner });
+
+        // 1 ETH is well below the cap
+        const contribution1 = 1;
+        await sendTransaction(contribution1, user2);
+        assert.equal(await balanceOf(user2), util.toEther(await offering.rate()));
+        assert.equal((await offering.weiRaised()).toNumber(), util.toEther(contribution1));
+
+        // Sending more ETH to reach the cap
+        const contribution2 = 2;
+        const sum = contribution1 + contribution2;
+        await sendTransaction(contribution2, user2);
+        assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
+        assert.equal((await offering.weiRaised()).toNumber(), util.toEther(sum));
+    });
+
+    it("should disallow unregistered users to buy tokens", async function () {
+        await util.assertRevert(sendTransaction(1, user2));
+    });
+
+    it("should reject transactions with 0 value", async function () {
+        await offering.whitelist(0, [user2], { from: owner });
+        await util.assertRevert(sendTransaction(0, user2));
     });
 
     it("Check if people are added correctly in whitelists", async function () {

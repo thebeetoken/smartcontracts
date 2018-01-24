@@ -248,19 +248,15 @@ contract BeeTokenOffering is Pausable {
      * Allocate tokens for presale participants before public offering, can only be executed at Stages.Setup stage.
      *
      * @param to Participant address to send beetokens to
-     * @param amountWei Contribution in Wei
-     * @param amountBeeToSend Amount of beetokens (*10**18) to be sent to parcitipant 
+     * @param tokens Amount of beetokens to be sent to parcitipant 
      */
-    function allocateTokensBeforeOffering(address to, uint256 amountWei, uint256 amountBeeToSend)
+    function allocateTokensBeforeOffering(address to, uint256 tokens)
         public
         onlyOwner
         atStage(Stages.Setup)
         returns (bool)
     {
-        // TODO: add logic to avoid double sending ?
-        contributions[to] = contributions[to].add(amountWei);
-
-        if (!token.transferFrom(token.owner(), to, amountBeeToSend)) {
+        if (!token.transferFrom(token.owner(), to, tokens * 10 ** uint256(token.decimals()))) {
             revert();
         }
         return true;
@@ -269,16 +265,16 @@ contract BeeTokenOffering is Pausable {
     /**
      * Bulk version of allocateTokensBeforeOffering
      */
-    function allocateTokensArrayBeforeOffering(address[] to, uint256[] amountWei, uint256[] amountBeeToSend)
+    function allocateTokensArrayBeforeOffering(address[] toList, uint256[] tokensList)
         external
         onlyOwner
         atStage(Stages.Setup)
         returns (bool)
     {
-        require(to.length == amountWei.length && to.length == amountBeeToSend.length);
+        require(toList.length == tokensList.length);
 
-        for (uint32 i = 0; i < to.length; i++) {
-            allocateTokensBeforeOffering(to[i], amountWei[i], amountBeeToSend[i]);
+        for (uint32 i = 0; i < toList.length; i++) {
+            allocateTokensBeforeOffering(toList[i], tokensList[i]);
         }
         return true;
     }
