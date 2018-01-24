@@ -453,15 +453,12 @@ contract('BeePayments Arbitration Host Test', function (accounts) {
         assert.equal(status, "2");
         var arb = await payments.arbitrationAddress();
         var contractBalance = (await token.balanceOf(payments.address)).toNumber();
-        console.log(contractBalance);
         var fee = (await payments.arbitrationFee()).toNumber();
         await token.approve(arb, fee, { from: supply });
         var allowanceS = (await token.allowance(supply, arb)).toNumber();
-        console.log(allowanceS);
         await payments.disputePayment(uuid, {from : supply});
         let d = (await token.balanceOf(demand)).toNumber();
         let s = (await token.balanceOf(supply)).toNumber();
-        console.log(d,s);
         assert.equal(d, 920);
         assert.equal(s, 980);
     });
