@@ -127,6 +127,28 @@ contract('Offering stage changes correctly', function (accounts) {
         assert.equal(balance, rate * contribution * 10 ** (18));
     });
 
+    it('Beneficiary gets ether correctly', async function () {
+        const token = await BeeToken.new(admin, { from: owner });
+        const rate = 5000;
+        const offering = await BeeTokenOffering.new(
+            rate, beneficiary, util.toEther(1), token.address, { from: owner }
+        );
+
+        await token.setTokenOffering(offering.address, 0);
+
+        await offering.whitelist(0, [user2]);
+        await offering.startOffering(300);
+
+        const originaBalance = web3.eth.getBalance(beneficiary).toNumber();
+        const contribution = 1;
+        await offering.sendTransaction({ value: util.toEther(contribution), from: user2 });
+
+        assert.equal(await token.balanceOf(user2), rate * contribution * 10 ** (18));
+        
+        const newBalance = web3.eth.getBalance(beneficiary).toNumber();
+        assert.equal(newBalance, originaBalance + contribution * 10**18);
+    });
+
     it('Purchase should should fail when not enough allowance', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const rate = 1;
@@ -201,6 +223,13 @@ contract('Whitelist Crowdsale', function (accounts) {
         await sendTransaction(contribution2, user2);
         assert.equal(await balanceOf(user2), util.toEther(sum * (await offering.rate())));
         assert.equal((await offering.weiRaised()).toNumber(), util.toEther(sum));
+    });
+
+    it('should fail if people send 0', async function () {
+        await offering.whitelist(0, [user2], { from: owner });
+
+        // 1 ETH is well below the cap
+        await util.assertRevert(sendTransaction(0, user2));
     });
 
     it('should disallow unregistered users to buy tokens', async function () {
@@ -376,6 +405,7 @@ contract('Individual contribution cap', function (accounts) {
         await offering.whitelist(0, [user2], { from: owner });
         assert.equal(await offering.contributions(user2), 0);
         assert.equal(await offering.weiRaised(), 0);
+        const originaBalance = web3.eth.getBalance(beneficiary).toNumber();
 
         // 1) cap should be 3 during first traunch
         const contribution1 = 3;
@@ -404,5 +434,7 @@ contract('Individual contribution cap', function (accounts) {
         await offering.sendTransaction({ value: util.toEther(contribution3), from: user2 });
         assert.equal(await offering.contributions(user2), (contribution1 + contribution2 + contribution3) * rate * unit);
         assert.equal((await offering.weiRaised()).toNumber(), (contribution1 + contribution2 + contribution3) * unit);
+
+        assert.equal(web3.eth.getBalance(beneficiary).toNumber(), originaBalance + (contribution1 + contribution2 + contribution3) * 10**18, 'total wei raised');
     });
 });
