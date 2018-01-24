@@ -15,21 +15,13 @@ contract BeeTokenOffering is Pausable {
     // Token to be sold
     BeeToken public token;
 
-    /* 
-     * Tokens per ether
-     * 2000 Bee($0.20) to Eth($400) => rate = 2000 ~ Update at time of offering
-     */ 
+    // Price of the tokens as in tokens per ether
     uint256 public rate;
 
     // Amount of raised in Wei (1 ether)
     uint256 public weiRaised;
 
-    /**
-     * Individual contribution limit at each stage by time:
-     * 1) sale start ~ capDoublingTimestamp: 1x of contribution limit per tier (1 * tierCaps[tier])
-     * 2) capDoublingTimestamp ~ capReleaseTimestamp: limit per participant is raised to 2x of contribution limit per tier (2 * tierCaps[tier])
-     * 3) capReleaseTimestamp ~ sale end: no limit per participant as along as total Wei raised is within FUNDING_ETH_HARD_CAP
-     */
+    // Timelines for different contribution limit policy
     uint256 public capDoublingTimestamp;
     uint256 public capReleaseTimestamp;
 
@@ -54,6 +46,8 @@ contract BeeTokenOffering is Pausable {
         OfferingEnded
     }
 
+    event OfferingOpens(uint256 startTime, uint256 endTime);
+    event OfferingCloses(uint256 endTime, uint256 totalWeiRaised);
     /**
      * Event for token purchase logging
      *
@@ -173,6 +167,7 @@ contract BeeTokenOffering is Pausable {
         capDoublingTimestamp = startTime + 24 hours;
         capReleaseTimestamp = startTime + 48 hours;
         endTime = capReleaseTimestamp.add(durationInSeconds);
+        OfferingOpens(startTime, endTime);
     }
 
     /**
@@ -246,6 +241,7 @@ contract BeeTokenOffering is Pausable {
     function endOfferingImpl() internal {
         endTime = now;
         stage = Stages.OfferingEnded;
+        OfferingCloses(endTime, weiRaised);
     }
 
     /**
