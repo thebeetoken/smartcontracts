@@ -145,7 +145,7 @@ contract BeeTokenOffering is Pausable {
     }
 
     /**
-     * Withdraw available ethers into beneficiary account
+     * Withdraw available ethers into beneficiary account, serves as a safety, should never be needed
      */
     function ownerSafeWithdrawal() external onlyOwner {
         beneficiary.transfer(this.balance);

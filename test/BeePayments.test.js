@@ -54,7 +54,7 @@ contract('BeePayments Dispatch Test', function (accounts) {
         var payStruct = await payments.allPayments(uuid);
         var exist = payStruct[0];
         assert.equal(exist, true);
-        await util.expectThrow(initPayment(uuid, 0));
+        await util.assertRevert(initPayment(uuid, 0));
     });
 
     it("should revert when sending ether", async function () {

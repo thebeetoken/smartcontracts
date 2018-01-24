@@ -46,6 +46,10 @@ contract('Offering stage changes correctly', function (accounts) {
         stage = await offering.stage();
         assert.equal(stage, 1, 'stage should be OfferingStarted');
 
+        let endTime = await offering.endTime();
+        let startTime = await offering.startTime();
+        assert.equal(endTime, startTime.toNumber() + 48 * 3600 + 300, 'end time should match');
+
         let hasEnded = await offering.hasEnded();
         assert.isFalse(hasEnded, 'not ended');
 
@@ -320,7 +324,7 @@ contract('Presale allocation', function (accounts) {
 
         assert.equal((await token.balanceOf(user3)), 0);
         assert.equal((await token.balanceOf(user4)), 0);
-        await util.assertRevert(offering.batchAllocateTokensBeforeOffering([user3, user4], [1000, 500]));
+        await util.assertRevert(offering.batchAllocateTokensBeforeOffering([user3, user4], [1000, 1000]));
         assert.equal((await token.balanceOf(user3)), 0);
         assert.equal((await token.balanceOf(user4)), 0);
     });
