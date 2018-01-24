@@ -265,7 +265,7 @@ contract BeeTokenOffering is Pausable {
     /**
      * Bulk version of allocateTokensBeforeOffering
      */
-    function allocateTokensArrayBeforeOffering(address[] toList, uint256[] tokensList)
+    function batchAllocateTokensBeforeOffering(address[] toList, uint256[] tokensList)
         external
         onlyOwner
         atStage(Stages.Setup)
