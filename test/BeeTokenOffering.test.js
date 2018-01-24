@@ -1,17 +1,119 @@
 
-var BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
-var BeeToken = artifacts.require("./BeeToken.sol");
-var util = require("./util.js");
+const BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
+const BeeToken = artifacts.require("./BeeToken.sol");
+const util = require("./util.js");
+
+contract('Offering stage changes correctly', function (accounts) {
+    const owner = accounts[0];
+    const admin = accounts[1];
+    const user2 = accounts[2];
+    const beneficiary = accounts[3];
+    const user4 = accounts[4];
+    
+    it('Start and end offering correctly', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const offering = await BeeTokenOffering.new(
+            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+        );
+
+        let stage = await offering.stage();
+        assert.equal(stage, 0, 'stage should be Setup');
+
+        await offering.startOffering(300, {from: owner});
+        stage = await offering.stage();
+        assert.equal(stage, 1, 'stage should be OfferingStarted');
+
+        let hasEnded = await offering.hasEnded();
+        assert.isFalse(hasEnded, 'not ended');
+
+        await offering.endOffering({from: owner});
+        stage = await offering.stage();
+        assert.equal(stage, 2, 'stage should be OfferingEnded');
+
+        hasEnded = await offering.hasEnded();
+        assert.isTrue(hasEnded, 'already ended');
+    });
+
+    it('End offering should fail before started', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const offering = await BeeTokenOffering.new(
+            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+        );
+
+        let stage = await offering.stage();
+        assert.equal(stage, 0, 'stage should be Setup');
+
+        await util.assertRevert(offering.endOffering({from: owner}));
+    });
+
+    it('Purchase should fail before offering is started', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const offering = await BeeTokenOffering.new(
+            5000, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+        );
+        await token.setTokenOffering(offering.address, 0);
+
+        let stage = await offering.stage();
+        assert.equal(stage, 0, 'stage should be Setup');
+
+        await offering.whitelist(0, [user2]);
+
+        await util.assertRevert(offering.sendTransaction({ value: util.oneEther, from: user2 }));
+    });
+
+    it('Purchase should succeed after offering is started and whitelisted', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const rate = 5000;
+        const offering = await BeeTokenOffering.new(
+            rate, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+        );
+
+        await token.setTokenOffering(offering.address, 0);
+
+        await offering.whitelist(0, [user2]);
+        await offering.startOffering(300);
+        let stage = await offering.stage();
+        assert.equal(stage, 1, 'stage should be OfferingStarted');
+
+        const contribution = 1;
+        await offering.sendTransaction({ value: util.toEther(contribution), from: user2 });
+
+        let balance = await token.balanceOf(user2);
+        assert.equal(balance, rate * contribution * 10**(18));
+    });
+
+    it('Purchase should should fail when not enough allowance', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        const rate = 5000;
+        const offering = await BeeTokenOffering.new(
+            rate, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+        );
+
+        await token.setTokenOffering(offering.address, 5001 * 10**18);
+
+        await offering.whitelist(0, [user2, user4]);
+        await offering.startOffering(300);
+        
+        const contribution = 1;
+        await offering.sendTransaction({ value: util.toEther(contribution), from: user2 });
+
+        let balance = await token.balanceOf(user2);
+        assert.equal(balance, rate * contribution * 10**(18));
+
+        // should fail be insufficiency in allowlance
+        await util.assertRevert(offering.sendTransaction({ value: util.toEther(1), from: user4 }));
+    });
+});
 
 contract('Whitelist Crowdsale', function (accounts) {
-    var owner = accounts[0];
-    var admin = accounts[1];
-    var user2 = accounts[2];
-    var user3 = accounts[3];
-    var user4 = accounts[4];
-    var user5 = accounts[5];
-    var user6 = accounts[6];
-    var beneficiary = accounts[7];
+    const owner = accounts[0];
+    const admin = accounts[1];
+    const user2 = accounts[2];
+    const user3 = accounts[3];
+    const user4 = accounts[4];
+    const user5 = accounts[5];
+    const user6 = accounts[6];
+    const beneficiary = accounts[7];
 
     var token = null;
     var offering = null;
@@ -29,10 +131,11 @@ contract('Whitelist Crowdsale', function (accounts) {
     async function sendTransaction(value, user) {
         await offering.sendTransaction({ value: util.toEther(value), from: user });
     }
-
+    
     async function balanceOf(user) {
         return (await token.balanceOf(user)).toNumber();
     }
+    
 
     it("should sell tokens at a prespecified rate", async function () {
         // user in tier 0, so cap is 3x of the base cap, 3 ethers
@@ -73,11 +176,6 @@ contract('Whitelist Crowdsale', function (accounts) {
         await offering.whitelist(2, [user4], { from: owner });
         r = await offering.whitelists(2, user4)
         assert.equal(r, true, "whitelist2 works");
-    });
-
-    it("not whitelisted address should fail sending ether", async function () {
-        // should fail even send ether within the base cap
-        await util.assertRevert(offering.sendTransaction({ from: user4, value: util.oneEther }));
     });
 
     it("whitelist addresses in whitelist0 -- 3x base cap, 3 ethers", async function () {

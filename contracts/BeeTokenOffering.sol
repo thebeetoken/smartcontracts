@@ -207,7 +207,7 @@ contract BeeTokenOffering is Pausable {
      * @return bool Return true if token offering has ended
      */
     function hasEnded() public view returns (bool) {
-        return now > endTime && stage != Stages.OfferingEnded;
+        return now > endTime || stage == Stages.OfferingEnded;
     }
 
     /**
@@ -256,7 +256,7 @@ contract BeeTokenOffering is Pausable {
         atStage(Stages.Setup)
         returns (bool)
     {
-        if (!token.transferFrom(token.owner(), to, tokens * 10 ** uint256(token.decimals()))) {
+        if (!token.transferFrom(token.owner(), to, tokens)) {
             revert();
         }
         return true;
