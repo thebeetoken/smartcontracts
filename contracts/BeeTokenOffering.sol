@@ -104,29 +104,29 @@ contract BeeTokenOffering is Pausable {
      * these limits are doubled between capDoublingTimestamp ~ capReleaseTimestamp
      * and are lifted completely between capReleaseTimestamp ~ end time
      *  
-     * @param etherToBeeRate Number of beetokens per ether
+     * @param beeToEtherRate Number of beetokens per ether
      * @param beneficiaryAddr Address where funds are collected
-     * @param baseContributionCapInEther Base contribution limit in ether per address
+     * @param baseContributionCapInWei Base contribution limit in Wei per address
      */
     function BeeTokenOffering(
-        uint256 etherToBeeRate, 
+        uint256 beeToEtherRate, 
         address beneficiaryAddr, 
-        uint256 baseContributionCapInEther,
+        uint256 baseContributionCapInWei,
         address tokenAddress
     ) public {
-        require(etherToBeeRate > 0);
+        require(beeToEtherRate > 0);
         require(beneficiaryAddr != address(0));
         require(tokenAddress != address(0));
 
         token = BeeToken(tokenAddress);
-        rate = etherToBeeRate;
+        rate = beeToEtherRate;
         beneficiary = beneficiaryAddr;
         stage = Stages.Setup;
 
         // Contribution cap per tier in Wei
-        tierCaps[0] = baseContributionCapInEther.mul(3);
-        tierCaps[1] = baseContributionCapInEther.mul(2);
-        tierCaps[2] = baseContributionCapInEther;
+        tierCaps[0] = baseContributionCapInWei.mul(3);
+        tierCaps[1] = baseContributionCapInWei.mul(2);
+        tierCaps[2] = baseContributionCapInWei;
     }
 
     /**
