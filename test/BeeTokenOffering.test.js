@@ -3,6 +3,29 @@ const BeeTokenOffering = artifacts.require("./BeeTokenOffering.sol");
 const BeeToken = artifacts.require("./BeeToken.sol");
 const util = require("./util.js");
 
+contract('BeeTokenOffering constructor', function(accounts) {
+    const owner = accounts[0];
+    const admin = accounts[1];
+    const user2 = accounts[2];
+    const beneficiary = accounts[3];
+
+    it('Constructor failure cases', async function() {
+        const token = await BeeToken.new(admin, { from: owner });
+        // etherToBee rate is 0
+        await util.assertRevert(BeeTokenOffering.new(
+            0, beneficiary, 1, token.address, { from: owner }
+        ));
+        // beneficiary address is 0
+        await util.assertRevert(BeeTokenOffering.new(
+            1, util.zeroAddress, 1, token.address, { from: owner }
+        ));
+        // token contract address is 0
+        await util.assertRevert(BeeTokenOffering.new(
+            1, beneficiary, 1, util.zeroAddress, { from: owner }
+        ));
+    });
+});
+
 contract('Offering stage changes correctly', function (accounts) {
     const owner = accounts[0];
     const admin = accounts[1];
@@ -135,7 +158,10 @@ contract('Whitelist Crowdsale', function (accounts) {
     async function balanceOf(user) {
         return (await token.balanceOf(user)).toNumber();
     }
-    
+
+    it('whitelist should fail when tier is out of range', async function () {
+        await util.assertRevert(offering.whitelist(3, [user2], { from: owner }));
+    });
 
     it("should sell tokens at a prespecified rate", async function () {
         // user in tier 0, so cap is 3x of the base cap, 3 ethers
