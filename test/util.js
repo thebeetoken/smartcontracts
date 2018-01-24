@@ -3,24 +3,6 @@ function toEther (n) {
 }
 
 module.exports = {
-    expectThrow : async function(promise) {
-        try {
-            await
-            promise;
-        } catch (error) {
-            const invalidOpcode = error.message.search('invalid opcode') >= 0;
-            const invalidJump = error.message.search('invalid JUMP') >= 0;
-            const outOfGas = error.message.search('out of gas') >= 0;
-            const reverFound = error.message.search('revert') >= 0;
-            assert(
-                invalidOpcode || invalidJump || outOfGas || reverFound,
-                "Expected throw, got '" + error + "' instead",
-            );
-            return;
-        }
-        assert.fail('Expected throw not received');
-    },
-
     assertRevert: async promise => {
         try {
             await promise;
@@ -30,36 +12,19 @@ module.exports = {
             assert(revetFound, `Expected "revert", got ${error} instead`);
         }
     },
-    
-    logUserBalances : async function logUserBalances (token, accounts) {
-        console.log("");
-        console.log("User Balances:");
-        console.log("--------------");
-        console.log(`Owner: ${(await token.balanceOf(accounts[0])).toNumber()}`);
-        console.log(`User1: ${(await token.balanceOf(accounts[1])).toNumber()}`);
-        console.log(`User2: ${(await token.balanceOf(accounts[2])).toNumber()}`);
-        console.log(`User3: ${(await token.balanceOf(accounts[3])).toNumber()}`);
-        console.log(`User4: ${(await token.balanceOf(accounts[4])).toNumber()}`);
 
-        console.log("--------------");
-        console.log("");
-    },
-
-    logEthBalances : async function logEthBalances (token, offering, accounts) {
-        console.log("");
-        console.log("Eth Balances:");
-        console.log("-------------");
-        console.log(`Owner: ${(await web3.eth.getBalance(accounts[0])).toNumber()}`);
-        console.log(`User1: ${(await web3.eth.getBalance(accounts[1])).toNumber()}`);
-        console.log(`User2: ${(await web3.eth.getBalance(accounts[2])).toNumber()}`);
-        console.log(`User3: ${(await web3.eth.getBalance(accounts[3])).toNumber()}`);
-        console.log(`User4: ${(await web3.eth.getBalance(accounts[4])).toNumber()}`);
-        console.log(`Sale : ${(await web3.eth.getBalance(sale.address)).toNumber()}`);
-        console.log(`Token: ${(await web3.eth.getBalance(token.address)).toNumber()}`);
-
-
-        console.log("--------------");
-        console.log("");
+    timeTravelInSeconds: function(timeInSec) {
+        return new Promise((resolve, reject) => {
+            web3.currentProvider.sendAsync({
+                jsonrpc: "2.0",
+                method: "evm_increaseTime",
+                params: [time], // 86400 is num seconds in day
+                id: new Date().getTime()
+            }, (err, result) => {
+                if (err) { return reject(err) }
+                return resolve(result)
+            });
+        });
     },
 
     toEther : toEther,

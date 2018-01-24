@@ -107,17 +107,17 @@ contract('Offering stage changes correctly', function (accounts) {
 
     it('Purchase should should fail when not enough allowance', async function() {
         const token = await BeeToken.new(admin, { from: owner });
-        const rate = 5000;
+        const rate = 1;
         const offering = await BeeTokenOffering.new(
-            rate, beneficiary, 1 /*base cap*/, token.address, { from: owner }
+            rate, beneficiary, 100 /*base cap*/, token.address, { from: owner }
         );
 
-        await token.setTokenOffering(offering.address, 5001 * 10**18);
+        await token.setTokenOffering(offering.address, 50 * 10**18);
 
         await offering.whitelist(0, [user2, user4]);
         await offering.startOffering(300);
         
-        const contribution = 1;
+        const contribution = 50;
         await offering.sendTransaction({ value: util.toEther(contribution), from: user2 });
 
         let balance = await token.balanceOf(user2);
