@@ -30,6 +30,8 @@ module.exports = function (deployer, network, accounts) {
             return BeeTokenOffering.deployed().then(instance => {
                 beeOffering = instance;
                 console.log(`BeeTokenOffering deployed at \x1b[36m${instance.address}\x1b[0m`)
+
+                beeToken.setTokenOffering(instance.address, 0);
             });
         })
     }).then(() => {

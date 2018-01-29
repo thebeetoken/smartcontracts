@@ -4,11 +4,15 @@ const parseSync = require('csv-parse/lib/sync');
 const program = require('commander');
 const Web3 = require('web3');
 
-const abiPath = '../build/BeeTokenOffering.json';
+const abiPath = '../build/contracts/BeeTokenOffering.json';
 const addressKey = 'eth_address';
 const beeAllocationKey = 'bee_allocation';
 const chunkSize = 1;
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+
+/**
+ * Example: node allocate_presale.js -I presale_input.csv -O output.csv -C 0x_offering_contract_address
+ */
 
 program
     .version('1.0.0')
@@ -40,12 +44,15 @@ async function run() {
         throw new Error(`No abi file in the truffle build directory, run 'truffle migrate' to generate abi using the latest code`);
     }
 
-    const logs = await handle(inputFile, outputFile);
-    console.log(`${logs}`);
+    const transactions = await handle(inputFile, outputFile);
+    console.log(`TRANSACTIONS: ${transactions}`);
+    fs.writeFileSync(outputFile, transactions.join('\n'));
 }
 
-run().then(function () {
+run().then(() => {
     console.log('Done!');
+}).catch((err) => {
+    console.log(`${err}`);
 });
 
 // FUNCTIONS
@@ -56,7 +63,7 @@ async function handle(inputFile, outputFile) {
         columns: true, // auto discover column names in the first line
         delimiter: ',',
     });
-    
+
     validateData(allRows);
 
     const chunks = splitIntoChunks(allRows, chunkSize);
@@ -65,31 +72,26 @@ async function handle(inputFile, outputFile) {
         return allocateTokensCall(c);
     });
 
-    // const getAccounts = (cb) => {
-    //     web3.eth.getAccounts(cb);
-    // };
-
-    // const result = await promisify(getAccounts);
-    // console.log(`${result}`);
-    return Promise.all(promiseCalls);;
+    const logs = await Promise.all(promiseCalls);
+    return logs;
 }
 
-function splitIntoChunks(data, chunkSize) {
+function splitIntoChunks(allRows, chunkSize) {
     let chunks = [];
 
-    if (array.length < chunkSize) {
-        chunkSize = array.length;
+    if (allRows.length < chunkSize) {
+        chunkSize = allRows.length;
     }
 
-    for (let i = 0, j = array.length; i < j; i += chunkSize) {
-        const tmp = array.slice(i, i + chunkSize);
+    for (let i = 0, j = allRows.length; i < j; i += chunkSize) {
+        const tmp = allRows.slice(i, i + chunkSize);
         chunks.push(tmp);
     }
 
     return chunks;
 }
 
-function allocateTokensCall(chunk) {
+async function allocateTokensCall(chunk) {
     const contractAddr = program.contract;
     const abi = require(abiPath).abi;
 
@@ -104,21 +106,26 @@ function allocateTokensCall(chunk) {
         return o[beeAllocationKey];
     });
 
-    const call = offering.batchAllocateTokensBeforeOffering.call.bind(
-        offering, destAddresses, allocationAmounts
-    );
+    const accounts = await promisify((cb) => {
+        web3.eth.getAccounts(cb);
+    });
 
-    return promisify(call);
+
+    return promisify(function (cb) {
+        const callData = offering.batchAllocateTokensBeforeOffering.getData(destAddresses, allocationAmounts);
+        const transactionData = { to: contractAddr, from: accounts[0], data: callData };
+        web3.eth.sendTransaction(transactionData, cb);
+    });
 }
 
 function validateData(allRows) {
     allRows.forEach((row) => {
         const addr = row[addressKey];
-        assert.ok(addr);
-        assert.equal(addr.length, 42, 'Address must be 42 length');
+        assert.ok(addr, `${addressKey} needs to be set`);
+        assert.equal(addr.length, 42, `${addressKey} must be 42 length`);
         const amount = row[beeAllocationKey];
-        assert.ok(amount);
-        assert.ok(parseInt(amount) > 0, 'Bee allocation must be greater than 0');
+        assert.ok(amount, `${beeAllocationKey} needs to be set`);
+        assert.ok(parseInt(amount) > 0, `${beeAllocationKey} must be greater than 0`);
     });
 }
 
@@ -126,7 +133,7 @@ function validateData(allRows) {
 function promisify(inner) {
     return new Promise((resolve, reject) =>
         inner((err, res) => {
-            if (err) { reject(err) }
+            if (err) { return reject(err); }
 
             resolve(res);
         })
