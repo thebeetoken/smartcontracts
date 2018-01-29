@@ -159,7 +159,7 @@ contract BeeTokenOffering is Pausable {
         require(tier < tierCaps.length);
         for (uint32 i = 0; i < users.length; i++) {
             whitelists[tier][users[i]] = true;
-            WhitelistUser(tier, i);
+            WhitelistUser(tier, users[i]);
         }
     }
 
