@@ -1,13 +1,14 @@
-const parseSync = require('csv-parse/lib/sync');
-const fs = require('fs');
-const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
-const program = require('commander');
 const assert = require('assert');
+const fs = require('fs');
+const parseSync = require('csv-parse/lib/sync');
+const program = require('commander');
+const Web3 = require('web3');
 
 const abiPath = '../build/BeeTokenOffering.json';
 const addressKey = 'eth_address';
 const beeAllocationKey = 'bee_allocation';
+const chunkSize = 1;
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 program
     .version('1.0.0')
@@ -58,7 +59,7 @@ async function handle(inputFile, outputFile) {
     
     validateData(allRows);
 
-    const chunks = splitIntoChunks(allRows);
+    const chunks = splitIntoChunks(allRows, chunkSize);
 
     const promiseCalls = chunks.map((c) => {
         return allocateTokensCall(c);
