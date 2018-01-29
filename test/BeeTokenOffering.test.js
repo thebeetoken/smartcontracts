@@ -339,6 +339,21 @@ contract('Presale allocation', function (accounts) {
         );
     })
 
+    it('should allow owner to change rate before offering starts', async function () {
+        await offering.updateRate(5500, { from: owner });
+        await offering.updateRate(5000, { from: owner });
+    });
+
+    it('should not allow non-owner to change rate', async function () {
+        await util.assertRevert(offering.updateRate(5500, { from: user4 }));
+    });
+
+    it('should not allow owner to change rate after offering starts', async function () {
+        await token.setTokenOffering(offering.address, 0);
+        await offering.startOffering(300);
+        await util.assertRevert(offering.updateRate(5500, { from: owner }));
+    });
+
     it('presale allocation can only happen before offering', async function () {
         token.setTokenOffering(offering.address, 0);
 

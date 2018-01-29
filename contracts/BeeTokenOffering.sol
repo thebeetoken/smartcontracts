@@ -143,6 +143,10 @@ contract BeeTokenOffering is Pausable {
         beneficiary.transfer(this.balance);
     }
 
+    function updateRate(uint256 beeToEtherRate) public onlyOwner atStage(Stages.Setup) {
+        rate = beeToEtherRate;
+    }
+
     /**
      * Whitelist participant address per tier
      * 
