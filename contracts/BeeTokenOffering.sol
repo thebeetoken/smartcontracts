@@ -57,6 +57,8 @@ contract BeeTokenOffering is Pausable {
      */
     event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
 
+    event WhitelistUser(uint8 tier, address indexed user);
+
     /**
      * Modifier that requires certain stage before executing the main function body
      *
@@ -157,6 +159,7 @@ contract BeeTokenOffering is Pausable {
         require(tier < tierCaps.length);
         for (uint32 i = 0; i < users.length; i++) {
             whitelists[tier][users[i]] = true;
+            WhitelistUser(tier, users[i]);
         }
     }
 
