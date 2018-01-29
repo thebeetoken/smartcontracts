@@ -2,3 +2,4 @@ node_modules/
 coverage.json
 coverage/
 build/
+scripts/*.csv

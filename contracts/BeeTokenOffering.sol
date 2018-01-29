@@ -152,14 +152,15 @@ contract BeeTokenOffering is Pausable {
     /**
      * Whitelist participant address per tier
      * 
-     * @param tier Index of tier, should be less than tierCaps.length
+     * @param tiers Array of indices of tier, each value should be less than tierCaps.length
      * @param users Array of addresses to be whitelisted
      */
-    function whitelist(uint8 tier, address[] users) public onlyOwner {
-        require(tier < tierCaps.length);
+    function whitelist(uint8[] tiers, address[] users) public onlyOwner {
+        require(tiers.length == users.length);
         for (uint32 i = 0; i < users.length; i++) {
-            whitelists[tier][users[i]] = true;
-            WhitelistUser(tier, users[i]);
+            require(tiers[i] < tierCaps.length);
+            whitelists[tiers[i]][users[i]] = true;
+            WhitelistUser(tiers[i], users[i]);
         }
     }
 

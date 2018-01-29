@@ -83,19 +83,19 @@ contract('Offering stage changes correctly', function (accounts) {
         let stage = await offering.stage();
         assert.equal(stage, 0, 'stage should be Setup');
 
-        await offering.whitelist(0, [user2]);
+        await offering.whitelist([0], [user2]);
 
         await util.assertRevert(offering.sendTransaction({ value: util.oneEther, from: user2 }));
     });
 
-    it('Purchase should fail after offering is ended', async function() {
+    it('Purchase should fail after offering is ended', async function () {
         const token = await BeeToken.new(admin, { from: owner });
         const offering = await BeeTokenOffering.new(
             5000, beneficiary, util.toEther(1), token.address, { from: owner }
         );
         await token.setTokenOffering(offering.address, 0);
 
-        await offering.whitelist(0, [user2, user4]);
+        await offering.whitelist([0, 0], [user2, user4]);
         await offering.startOffering(300, { from: owner });
 
         await offering.sendTransaction({ value: util.toEther(1), from: user2 });
@@ -115,7 +115,7 @@ contract('Offering stage changes correctly', function (accounts) {
 
         await token.setTokenOffering(offering.address, 0);
 
-        await offering.whitelist(0, [user2]);
+        await offering.whitelist([0], [user2]);
         await offering.startOffering(300);
         let stage = await offering.stage();
         assert.equal(stage, 1, 'stage should be OfferingStarted');
@@ -136,7 +136,7 @@ contract('Offering stage changes correctly', function (accounts) {
 
         await token.setTokenOffering(offering.address, 0);
 
-        await offering.whitelist(0, [user2]);
+        await offering.whitelist([0], [user2]);
         await offering.startOffering(300);
         let stage = await offering.stage();
         assert.equal(stage, 1, 'stage should be OfferingStarted');
@@ -154,7 +154,7 @@ contract('Offering stage changes correctly', function (accounts) {
 
         await token.setTokenOffering(offering.address, 0);
 
-        await offering.whitelist(0, [user2]);
+        await offering.whitelist([0], [user2]);
         await offering.startOffering(300);
 
         const originaBalance = web3.eth.getBalance(beneficiary).toNumber();
@@ -162,9 +162,9 @@ contract('Offering stage changes correctly', function (accounts) {
         await offering.sendTransaction({ value: util.toEther(contribution), from: user2 });
 
         assert.equal(await token.balanceOf(user2), rate * contribution * 10 ** (18));
-        
+
         const newBalance = web3.eth.getBalance(beneficiary).toNumber();
-        assert.equal(newBalance, originaBalance + contribution * 10**18);
+        assert.equal(newBalance, originaBalance + contribution * 10 ** 18);
     });
 
     it('Purchase should should fail when not enough allowance', async function () {
@@ -176,7 +176,7 @@ contract('Offering stage changes correctly', function (accounts) {
 
         await token.setTokenOffering(offering.address, 50 * 10 ** 18);
 
-        await offering.whitelist(0, [user2, user4]);
+        await offering.whitelist([0, 0], [user2, user4]);
         await offering.startOffering(300);
 
         const contribution = 50;
@@ -222,12 +222,16 @@ contract('Whitelist Crowdsale', function (accounts) {
     }
 
     it('whitelist should fail when tier is out of range', async function () {
-        await util.assertRevert(offering.whitelist(3, [user2], { from: owner }));
+        await util.assertRevert(offering.whitelist([3], [user2], { from: owner }));
+    });
+
+    it('whitelist should fail when two lengths input arrays mismatch ', async function () {
+        await util.assertRevert(offering.whitelist([0, 1], [user2], { from: owner }));
     });
 
     it('should sell tokens at a prespecified rate', async function () {
         // user in tier 0, so cap is 3x of the base cap, 3 ethers
-        await offering.whitelist(0, [user2], { from: owner });
+        await offering.whitelist([0], [user2], { from: owner });
 
         // 1 ETH is well below the cap
         const contribution1 = 1;
@@ -244,7 +248,7 @@ contract('Whitelist Crowdsale', function (accounts) {
     });
 
     it('should fail if people send 0', async function () {
-        await offering.whitelist(0, [user2], { from: owner });
+        await offering.whitelist([0], [user2], { from: owner });
 
         // 1 ETH is well below the cap
         await util.assertRevert(sendTransaction(0, user2));
@@ -255,20 +259,20 @@ contract('Whitelist Crowdsale', function (accounts) {
     });
 
     it('should reject transactions with 0 value', async function () {
-        await offering.whitelist(0, [user2], { from: owner });
+        await offering.whitelist([0], [user2], { from: owner });
         await util.assertRevert(sendTransaction(0, user2));
     });
 
     it('Check if people are added correctly in whitelists', async function () {
-        await offering.whitelist(0, [user2], { from: owner });
+        await offering.whitelist([0], [user2], { from: owner });
         let r = await offering.whitelists(0, user2)
         assert.equal(r, true, 'whitelist0 works');
 
-        await offering.whitelist(1, [user3], { from: owner });
+        await offering.whitelist([1], [user3], { from: owner });
         r = await offering.whitelists(1, user3)
         assert.equal(r, true, 'whitelist1 works');
 
-        await offering.whitelist(2, [user4], { from: owner });
+        await offering.whitelist([2], [user4], { from: owner });
         r = await offering.whitelists(2, user4)
         assert.equal(r, true, 'whitelist2 works');
     });
@@ -276,7 +280,7 @@ contract('Whitelist Crowdsale', function (accounts) {
     it('whitelist addresses in whitelist0 -- 3x base cap, 3 ethers', async function () {
         let addresses = [user4, user5, user6];
 
-        await offering.whitelist(0, addresses, { from: owner });
+        await offering.whitelist([0, 0, 0], addresses, { from: owner });
 
         await offering.sendTransaction({ from: user4, value: util.twoEther });
         await offering.sendTransaction({ from: user5, value: util.threeEther });
@@ -293,7 +297,7 @@ contract('Whitelist Crowdsale', function (accounts) {
     it('whitelist addresses in whitelist1 -- 2x base cap, 2 ethers', async function () {
         let addresses = [user4, user5, user6];
 
-        await offering.whitelist(1, addresses, { from: owner });
+        await offering.whitelist([1, 1, 1], addresses, { from: owner });
 
         await offering.sendTransaction({ from: user4, value: util.oneEther });
         await offering.sendTransaction({ from: user5, value: util.twoEther });
@@ -309,7 +313,7 @@ contract('Whitelist Crowdsale', function (accounts) {
     it('whitelist addresses in whitelist2 -- 1x base cap, 1 ether', async function () {
         let addresses = [user4, user5, user6];
 
-        await offering.whitelist(2, addresses, { from: owner });
+        await offering.whitelist([2, 2, 2], addresses, { from: owner });
 
         await offering.sendTransaction({ from: user4, value: util.halfEther });
         await offering.sendTransaction({ from: user5, value: util.oneEther });
@@ -355,7 +359,7 @@ contract('Presale allocation', function (accounts) {
     });
 
     it('presale allocation can only happen before offering', async function () {
-        token.setTokenOffering(offering.address, 0);
+        await token.setTokenOffering(offering.address, 0);
 
         assert.equal(await offering.stage(), 0, 'offering in Setup stage');
         assert.equal((await token.balanceOf(user3)), 0);
@@ -364,15 +368,15 @@ contract('Presale allocation', function (accounts) {
     });
 
     it('presale allocation can not happen after offering is started', async function () {
-        token.setTokenOffering(offering.address, 0);
-        offering.startOffering(300);
+        await token.setTokenOffering(offering.address, 0);
+        await offering.startOffering(300);
 
         assert.equal(await offering.stage(), 1, 'offering in OfferingStarted stage');
         await util.assertRevert(offering.allocateTokensBeforeOffering(user3, 1000));
     });
 
     it('batch presale allocation before offering is started', async function () {
-        token.setTokenOffering(offering.address, 0);
+        await token.setTokenOffering(offering.address, 0);
 
         assert.equal(await offering.stage(), 0, 'offering in Setup stage');
         assert.equal((await token.balanceOf(user3)), 0);
@@ -383,16 +387,16 @@ contract('Presale allocation', function (accounts) {
     });
 
     it('batch presale allocation fails after offering is started', async function () {
-        token.setTokenOffering(offering.address, 0);
-        offering.startOffering(300);
+        await token.setTokenOffering(offering.address, 0);
+        await offering.startOffering(300);
 
         assert.equal(await offering.stage(), 1, 'offering in OfferingStarted stage');
         await util.assertRevert(offering.batchAllocateTokensBeforeOffering([user3, user4], [1000, 2000]));
     });
 
     it('batch presale allocation fails due to parameter length mismatch', async function () {
-        token.setTokenOffering(offering.address, 0);
-        offering.startOffering(300);
+        await token.setTokenOffering(offering.address, 0);
+        await offering.startOffering(300);
 
         assert.equal(await offering.stage(), 1, 'offering in OfferingStarted stage');
         await util.assertRevert(offering.batchAllocateTokensBeforeOffering([user3, user4], [1000, 2000, 3000]));
@@ -400,7 +404,7 @@ contract('Presale allocation', function (accounts) {
 
     it('batch presale allocation all fails as long as one fail', async function () {
         // 1500 tokens in total
-        token.setTokenOffering(offering.address, 1500);
+        await token.setTokenOffering(offering.address, 1500);
 
         assert.equal((await token.balanceOf(user3)), 0);
         assert.equal((await token.balanceOf(user4)), 0);
@@ -435,14 +439,14 @@ contract('Individual contribution cap', function (accounts) {
 
     it('cap shoud change over time', async function () {
         // user in tier 0, so cap is 3x of the base cap, 3 ethers
-        await offering.whitelist(0, [user2], { from: owner });
+        await offering.whitelist([0], [user2], { from: owner });
         assert.equal(await offering.contributions(user2), 0);
         assert.equal(await offering.weiRaised(), 0);
         const originaBalance = web3.eth.getBalance(beneficiary).toNumber();
 
         // 1) cap should be 3 during first traunch
         const contribution1 = 3;
-        const unit = 10**18;
+        const unit = 10 ** 18;
 
         await offering.sendTransaction({ value: util.toEther(contribution1), from: user2 });
         assert.equal(await offering.contributions(user2), contribution1 * rate * unit);
@@ -468,6 +472,6 @@ contract('Individual contribution cap', function (accounts) {
         assert.equal(await offering.contributions(user2), (contribution1 + contribution2 + contribution3) * rate * unit);
         assert.equal((await offering.weiRaised()).toNumber(), (contribution1 + contribution2 + contribution3) * unit);
 
-        assert.equal(web3.eth.getBalance(beneficiary).toNumber(), originaBalance + (contribution1 + contribution2 + contribution3) * 10**18, 'total wei raised');
+        assert.equal(web3.eth.getBalance(beneficiary).toNumber(), originaBalance + (contribution1 + contribution2 + contribution3) * 10 ** 18, 'total wei raised');
     });
 });
