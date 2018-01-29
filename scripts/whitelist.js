@@ -76,7 +76,7 @@ async function handle(inputFile, outputFile) {
     const chunks = splitIntoChunks(allRows, chunkSize);
 
     const promiseCalls = chunks.map((c) => {
-        return allocateTokensCall(c);
+        return whitelistCall(c);
     });
 
     const logs = await Promise.all(promiseCalls);
@@ -98,7 +98,7 @@ function splitIntoChunks(allRows, chunkSize) {
     return chunks;
 }
 
-async function allocateTokensCall(chunk) {
+async function whitelistCall(chunk) {
     const contractAddr = program.contract;
     const abi = require(abiPath).abi;
 
@@ -109,18 +109,19 @@ async function allocateTokensCall(chunk) {
         return o[addressKey];
     });
 
-    const allocationAmounts = chunk.map((o) => {
-        return o[tier];
+    const tiers = chunk.map((o) => {
+        return o[tierKey];
     });
 
     const accounts = await promisify((cb) => {
         web3.eth.getAccounts(cb);
     });
 
-
     return promisify(function (cb) {
-        const callData = offering.batchAllocateTokensBeforeOffering.getData(destAddresses, allocationAmounts);
+        const callData = offering.whitelist.getData(tiers, destAddresses);
         const transactionData = { to: contractAddr, from: accounts[0], data: callData };
+        const estimatedGas = web3.eth.estimateGas(transactionData);
+        transactionData.gas = estimatedGas;
         web3.eth.sendTransaction(transactionData, cb);
     });
 }
@@ -130,8 +131,8 @@ function validateData(allRows) {
         const addr = row[addressKey];
         assert.ok(addr, `${addressKey} needs to be set`);
         assert.equal(addr.length, 42, `${addressKey} must be 42 length`);
-        const tier = row[tier];
-        assert.ok(tier, `${tier} needs to be set`);
-        assert.ok(parseInt(tier) >= 0, `${tier} must be greater than 0`);
+        const tier = row[tierKey];
+        assert.ok(tier, `${tierKey} needs to be set`);
+        assert.ok(parseInt(tier) >= 0, `${tierKey} must be greater than 0`);
     });
 }

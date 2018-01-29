@@ -121,6 +121,8 @@ async function allocateTokensCall(chunk) {
     return promisify(function (cb) {
         const callData = offering.batchAllocateTokensBeforeOffering.getData(destAddresses, allocationAmounts);
         const transactionData = { to: contractAddr, from: accounts[0], data: callData };
+        const estimatedGas = web3.eth.estimateGas(transactionData);
+        transactionData.gas = estimatedGas;
         web3.eth.sendTransaction(transactionData, cb);
     });
 }
