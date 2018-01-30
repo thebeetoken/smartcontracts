@@ -37,6 +37,9 @@ contract BeeTokenOffering is Pausable {
     // Funding cap in ETH. Change to equal $5M at time of token offering
     uint256 public constant FUNDING_ETH_HARD_CAP = 5000 * 1 ether;
 
+    // Min contribution in Wei
+    uint256 public constant MINIMUM_CONTRIBUTION = 1 * 10**17;
+
     // The current stage of the offering
     Stages public stage;
 
@@ -83,7 +86,7 @@ contract BeeTokenOffering is Pausable {
 
         uint256 contributionInWei = msg.value;
         address participant = msg.sender;
-        require(participant != address(0) && contributionInWei > 100000000000000000);
+        require(participant != address(0) && contributionInWei >= MINIMUM_CONTRIBUTION);
         require(weiRaised.add(contributionInWei) <= FUNDING_ETH_HARD_CAP);
 
         uint256 initialCapInWei = tierCaps[tier];
@@ -117,6 +120,7 @@ contract BeeTokenOffering is Pausable {
         require(beeToEtherRate > 0);
         require(beneficiaryAddr != address(0));
         require(tokenAddress != address(0));
+        require(baseContributionCapInWei >= MINIMUM_CONTRIBUTION);
 
         token = BeeToken(tokenAddress);
         rate = beeToEtherRate;
