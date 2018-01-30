@@ -128,12 +128,12 @@ async function allocateTokensCall(chunk) {
 }
 
 function validateData(allRows) {
-    allRows.forEach((row) => {
+    allRows.forEach((row, i) => {
         const addr = row[addressKey];
-        assert.ok(addr, `${addressKey} needs to be set`);
-        assert.equal(addr.length, 42, `${addressKey} must be 42 length`);
+        assert.ok(addr, `${addressKey} needs to be set in line ${i+2}`);
+        assert.equal(addr.length, 42, `${addressKey} must be 42 length in line ${i+2}`);
         const amount = row[beeAllocationKey];
-        assert.ok(amount, `${beeAllocationKey} needs to be set`);
-        assert.ok(parseInt(amount) > 0, `${beeAllocationKey} must be greater than 0`);
+        assert.ok(amount, `${beeAllocationKey} needs to be set in line ${i+2}`);
+        assert.ok(parseInt(amount) > 0, `${beeAllocationKey} must be greater than 0 in line ${i+2}`);
     });
 }
