@@ -13,7 +13,7 @@ const addressKey = 'eth_address';
 // CSV key for tier for each contributor
 const tierKey = 'tier';
 // Number of allocations send in one batch request
-const chunkSize = 200;
+const chunkSize = 400;
 // Configurations for geth node
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
