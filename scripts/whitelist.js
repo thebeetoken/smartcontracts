@@ -13,7 +13,7 @@ const addressKey = 'eth_address';
 // CSV key for tier for each contributor
 const tierKey = 'tier';
 // Number of allocations send in one batch request
-const chunkSize = 50;
+const chunkSize = 200;
 // Configurations for geth node
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
@@ -127,12 +127,12 @@ async function whitelistCall(chunk) {
 }
 
 function validateData(allRows) {
-    allRows.forEach((row) => {
+    allRows.forEach((row, i) => {
         const addr = row[addressKey];
-        assert.ok(addr, `${addressKey} needs to be set`);
-        assert.equal(addr.length, 42, `${addressKey} must be 42 length`);
+        assert.ok(addr, `${addressKey} needs to be set in line ${i+2}`);
+        assert.equal(addr.length, 42, `${addressKey} must be 42 length in line ${i+2}`);
         const tier = row[tierKey];
-        assert.ok(tier, `${tierKey} needs to be set`);
-        assert.ok(parseInt(tier) >= 0, `${tierKey} must be greater than 0`);
+        assert.ok(tier, `${tierKey} needs to be set in line ${i+2}`);
+        assert.ok(parseInt(tier) >= 0, `${tierKey} must be greater than 0 in line ${i+2}`);
     });
 }
