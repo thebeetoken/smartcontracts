@@ -13,15 +13,15 @@ contract('BeeTokenOffering constructor', function (accounts) {
         const token = await BeeToken.new(admin, { from: owner });
         // etherToBee rate is 0
         await util.assertRevert(BeeTokenOffering.new(
-            0, beneficiary, 1, token.address, { from: owner }
+            0, beneficiary, 10**17, token.address, { from: owner }
         ));
         // beneficiary address is 0
         await util.assertRevert(BeeTokenOffering.new(
-            1, util.zeroAddress, 1, token.address, { from: owner }
+            1, util.zeroAddress, 10**17, token.address, { from: owner }
         ));
         // token contract address is 0
         await util.assertRevert(BeeTokenOffering.new(
-            1, beneficiary, 1, util.zeroAddress, { from: owner }
+            1, beneficiary, 10**17, util.zeroAddress, { from: owner }
         ));
     });
 });

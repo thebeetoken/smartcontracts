@@ -16,7 +16,7 @@ contract('BeeToken (Basic Tests)', function (accounts) {
     beforeEach(async function () {
         token = await BeeToken.new(admin, { from: owner });
         offering = await BeeTokenOffering.new(
-            1, token.address, 1000, token.address
+            1, token.address, 10**17, token.address
         );
     });
 

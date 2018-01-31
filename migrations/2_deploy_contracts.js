@@ -22,7 +22,7 @@ module.exports = function (deployer, network, accounts) {
     }).then(() => {
         const rate = 5000;
         const beneficiary = accounts[1];
-        const baseCap = 10;
+        const baseCap = 10**17;
 
         return deployer.deploy(
             BeeTokenOffering, rate, beneficiary, baseCap, beeToken.address, { from: owner }
