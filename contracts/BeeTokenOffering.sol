@@ -37,8 +37,8 @@ contract BeeTokenOffering is Pausable {
     // Funding cap in ETH. Change to equal $5M at time of token offering
     uint256 public constant FUNDING_ETH_HARD_CAP = 5000 * 1 ether;
 
-    // Min contribution in Wei
-    uint256 public constant MINIMUM_CONTRIBUTION = 1 * 10**17;
+    // Min contribution is 0.1 ether
+    uint256 public constant MINIMUM_CONTRIBUTION = 10**17;
 
     // The current stage of the offering
     Stages public stage;
