@@ -8,8 +8,8 @@ module.exports = {
             await promise;
             assert.fail('Expected revert not received');
         } catch (error) {
-            const revetFound = error.message.search('revert') >= 0;
-            assert(revetFound, `Expected "revert", got ${error} instead`);
+            const revertFound = error.message.search('revert') >= 0;
+            assert(revertFound, `Expected "revert", got ${error} instead`);
         }
     },
 
