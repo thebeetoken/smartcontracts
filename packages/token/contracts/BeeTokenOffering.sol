@@ -1,6 +1,6 @@
 pragma solidity ^0.4.18;
 import "./BeeToken.sol";
-import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
 contract BeeTokenOffering is Pausable {
     using SafeMath for uint256;

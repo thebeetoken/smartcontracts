@@ -1,8 +1,8 @@
 pragma solidity ^0.4.18; 
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
-import "zeppelin-solidity/contracts/token/StandardToken.sol";
-import "zeppelin-solidity/contracts/token/BurnableToken.sol";
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/BurnableToken.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 /*
  * BeeToken is a standard ERC20 token with some additional functionalities:
@@ -72,11 +72,11 @@ contract BeeToken is StandardToken, BurnableToken, Ownable {
      * @param admin Address of admin account
      */
     function BeeToken(address admin) public {
-        totalSupply = INITIAL_SUPPLY;
+        totalSupply_ = INITIAL_SUPPLY;
         
         // Mint tokens
-        balances[msg.sender] = totalSupply;
-        Transfer(address(0x0), msg.sender, totalSupply);
+        balances[msg.sender] = totalSupply_;
+        Transfer(address(0x0), msg.sender, totalSupply_);
 
         // Approve allowance for admin account
         adminAddr = admin;

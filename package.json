@@ -2,30 +2,20 @@
   "name": "bee-contracts",
   "version": "0.0.1",
   "description": "Smart Contracts V2 for Bee Token",
-  "main": "truffle-config.js",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
-    "test": "truffle test",
-    "cover": "solidity-coverage",
-    "view-cover": "opn ./coverage/index.html"
+    "bootstrap": "lerna bootstrap --hoist",
+    "test": "lerna run test"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ethereumjs-abi": "^0.6.5",
-    "truffle": "^4.0.4",
-    "zeppelin-solidity": "^1.5.0"
   },
   "devDependencies": {
-    "big-integer": "^1.6.26",
-    "opn-cli": "^3.1.0",
-    "solidity-coverage": "^0.4.8"
+    "dotenv": "^6.1.0",
+    "lerna": "^3.4.3"
   },
   "engines": {
-    "node": "8.4.0",
-    "npm": "5.3.0"
+    "node": "8.11.3"
   },
   "repository": {
     "type": "git",

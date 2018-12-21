@@ -1,0 +1,28 @@
+{
+  "name": "token",
+  "version": "0.0.1",
+  "description": "Bee Token",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/truffle test",
+    "cover": "./node_modules/.bin/solidity-coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ethereumjs-abi": "^0.6.5",
+    "openzeppelin-solidity": "^1.5.0",
+    "truffle": "^4.1.14"
+  },
+  "devDependencies": {
+    "dotenv": "^6.1.0",
+    "big-integer": "^1.6.26",
+    "solidity-coverage": "^0.5.11"
+  },
+  "engines": {
+    "node": "8.11.3"
+  }
+}
