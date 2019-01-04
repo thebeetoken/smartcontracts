@@ -115,7 +115,7 @@ contract BeeArbEvents {
         uint256 timestamp //timestamp of request
     );
 
-    event MinerStopedMining
+    event MinerStoppedMining
     (
         uint256 arbitrationId, //The unique id of miner
         uint256 stake, //the stake the miner started mining with
@@ -130,7 +130,7 @@ contract BeeArbEvents {
         uint256 timestamp //timestamp of request
     );
     
-    event ArbiterVoteSubmited
+    event ArbiterVoteSubmitted
     (
         uint256 arbiterId, //The unique id of abiter
         uint256 voteSubmitted, //the path that the trigger took
@@ -549,7 +549,7 @@ contract BeeArbitration is BeeArbEvents, BeeModifiers, BeeArbitrationStructs {
 
         require(beeToken.transfer(curMiner.minerAddress, curMiner.currentBeeTokenStake), "transfer to miner stake failed");
 
-        emit MinerStopedMining (minerId, curMiner.currentBeeTokenStake, now);
+        emit MinerStoppedMining (minerId, curMiner.currentBeeTokenStake, now);
         curMiner.currentBeeTokenStake = 0;
         curMiner.miningArrayIndex = 0;
         existingArbiters[minerId] = curMiner;
@@ -655,7 +655,7 @@ contract BeeArbitration is BeeArbEvents, BeeModifiers, BeeArbitrationStructs {
         currentVote.state = VoteState.VOTE_COMPLETE;
         
 
-        emit ArbiterVoteSubmited(currentVote.arbiterId, vote, now);
+        emit ArbiterVoteSubmitted(currentVote.arbiterId, vote, now);
     }
     
     /**
