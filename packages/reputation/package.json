@@ -1,0 +1,27 @@
+{
+  "name": "reputation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/truffle test",
+    "cover": "./node_modules/.bin/solidity-coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "openzeppelin-solidity": "^1.12.0",
+    "package.json": "^2.0.1",
+    "truffle-hdwallet-provider": "0.0.6",
+    "web3": "^0.18.4"
+  },
+  "devDependencies": {
+    "dotenv": "^6.1.0",
+    "ganache-cli": "^6.1.8",
+    "solidity-coverage": "^0.5.11",
+    "truffle": "^4.1.14"
+  }
+}
