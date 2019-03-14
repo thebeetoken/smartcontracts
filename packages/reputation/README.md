@@ -19,8 +19,7 @@ Run Ganache before testing:
 
     ganache-cli --allowUnlimitedContractSize true --gasLimit 800000000 --gasPrice 1
 
-The allowUnlimitedContractSize flag gets by ganache's low byte code limit on contracts (it was small like this before on main net and test net but they increased the size a while back.  Given that, the arbitration contract rubs pretty close against the new limit). The gas limit on main net is 8 million but for some reason the gas prices for instructions are wrong on ganache and it cost way more to deploy (Arbitration.sol runs about 6-7 million gas, to clear that you'll need gas price a little higher than normal because a high gas price for 3 million as would knock you out of the deploy for a given block block).
-
+ 
 ### Automated
 
     truffle test
