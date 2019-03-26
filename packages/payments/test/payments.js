@@ -49,7 +49,6 @@ contract('TokenPayments', accounts => {
     await Promise.all([...accounts, arbitration.address].map(
       address => token.burnAll(address)
     ));
-    await payments.whitelist(host, true, { from: owner });
     await token.mint(total, guest);
     await token.approve(payments.address, '0', { from: guest });
   });
@@ -188,33 +187,6 @@ contract('TokenPayments', accounts => {
     const now = await blockNow();
     const id = idFactory.next();
     await token.approve(payments.address, total, { from: guest });
-
-    let thrown = undefined;
-    try {
-      await payments.invoice(
-        id,
-        host,
-        '0x0',
-        price,
-        deposit,
-        '0',
-        now + cancelPeriod,
-        now + disputePeriod,
-        { from: host }
-      );
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).not.to.equal(undefined);
-  });
-
-  it('prevents invoice from a non-whitelisted address', async () => {
-    const token = await TestToken.deployed();
-    const payments = await TokenPayments.deployed();
-    const now = await blockNow();
-    const id = idFactory.next();
-    await token.approve(payments.address, total, { from: guest });
-    await payments.whitelist(host, false, { from: owner });
 
     let thrown = undefined;
     try {

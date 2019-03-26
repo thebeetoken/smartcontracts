@@ -5,19 +5,6 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./Arbitration.sol";
 
-contract Whitelist is Ownable {
-    mapping(address => bool) public whitelisted;
-
-    function whitelist(address caller, bool enabled) public onlyOwner {
-        whitelisted[caller] = enabled;
-    }
-
-    modifier onlyWhitelisted() {
-        require(whitelisted[msg.sender], "Approved callers only.");
-        _;
-    }
-}
-
 contract Payments is Ownable {
     struct Details {
         bool active;
@@ -178,7 +165,7 @@ contract Payments is Ownable {
     Arbitration public arbitration;
 }
 
-contract TokenPayments is Whitelist, Payments {
+contract TokenPayments is Payments {
     using SafeMath for uint256;
 
     ERC20 public token;
@@ -210,7 +197,6 @@ contract TokenPayments is Whitelist, Payments {
         uint64 disputeDeadline
     )
         external
-        onlyWhitelisted
         invoices(id)
     {
         require(
